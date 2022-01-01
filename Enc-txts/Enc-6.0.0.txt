@@ -1,0 +1,172 @@
+import zlib, base64, random, hashlib, os
+
+# ENC V6.0.0
+
+
+def hex_gens(num):
+    hex_gens_ = ""
+    while len(hex_gens_) != num:
+        alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/"
+        hex_gens_add = random.choice(alphagens)
+        hex_gens_ += hex_gens_add
+    return hex_gens_
+
+
+def sha_to_data(sha):
+    num_ = ""
+    letters_ = ""
+    for char in sha:
+        if char in "1234567890":
+            num_ += char
+        else:
+            letters_ += char
+    return num_, letters_
+
+
+def pass_to_seed(password):
+    block_size = 65536
+    hash_ = hashlib.sha512()
+    with open('enc6.py', 'rb') as hash_file:
+        buf = hash_file.read(block_size)
+        while len(buf) > 0:
+            hash_.update(buf)
+            buf = hash_file.read(block_size)
+    hash_disrupt, salt = sha_to_data(hash_.hexdigest())
+    salt = salt.replace("a", "2").replace("b", "3").replace("c", "5") \
+        .replace("d", "7").replace("e", "9").replace("f", "1")
+
+    inp = str(int(hash_disrupt[::-1]) / 2) + password
+    sha = hashlib.sha512(hashlib.sha512(base64.b85encode(inp.encode())).hexdigest().encode()).hexdigest()
+    num, letters = sha_to_data(sha)
+    sha2 = hashlib.sha512(letters.encode()).hexdigest()
+    num2_, letters2 = sha_to_data(sha2)
+    letters2 = letters2.replace("a", "2").replace("b", "3").replace("c", "5") \
+        .replace("d", "7").replace("e", "9").replace("f", "1")
+
+    if not len(str(int(((num + num2_[::-1])[::-1])[:128])-int(salt[:16])+int(salt[-16:]))) > 127:
+        int_seed = int((num+letters2[-(128-len(str(num+num2_))):]+num2_[::-1])[::-1])-int(salt[:16])+int(salt[-16:])
+    else:
+        int_seed = int(((num+num2_[::-1])[::-1])[:128])-int(salt[:16])+int(salt[-16:])
+    return int(int_seed)
+
+
+if not os.path.isfile("seed_key.txt"):
+    open("seed_key.txt", "w").close()
+with open("seed_key.txt", encoding="utf-8") as f:
+    seed_key = ""
+    for line in f.readlines():
+        seed_key += line
+
+if seed_key == "":
+    seed_key = input("Enter seed_key or leave blank: ")
+    if seed_key == "":
+        seed_key = hex_gens(128)
+        with open("seed_key.txt", "w", encoding="utf-8") as f:
+            f.write(seed_key)
+    else:
+        with open("seed_key.txt", "w", encoding="utf-8") as f:
+            f.write(seed_key)
+
+seed = pass_to_seed(seed_key)
+seed_ = pass_to_seed(str(seed))
+seed2 = str(pass_to_seed((str(seed)[32:]+str(seed)[:32])[::-1]))
+seed2_ = str(pass_to_seed(str(seed2)[::-1]))
+seed2 = seed2_ + seed2
+seed = int(str(seed)+str(seed_))
+
+
+def seed2_to_alpha(seeds):
+    alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/"
+    counter = 0
+    alpha = ""
+    while len(alphagens) > 1:
+        counter += 3
+        value = int(str(seeds)[counter:counter+1]) + int(str(seeds)[counter:counter+1])
+        while value > len(alphagens)-1:
+            value = value // 2
+        if len(str(seeds)[counter:]) < 2:
+            alpha += alphagens
+            alphagens = alphagens.replace(alphagens, "")
+        else:
+            choosen = alphagens[value]
+            alpha += choosen
+            alphagens = alphagens.replace(choosen, "")
+    return alpha
+
+
+alpha1 = seed2_to_alpha(seed)
+alpha2 = seed2_to_alpha(seed2)
+num2 = int(str(seed_)[28:32])
+if num2 > 8999:
+    num2 -= 2500
+
+print(f"\nSEED KEY:\n{seed_key}\n")
+
+
+def fib_iter(text, num2_):
+    a = 1
+    b = 1
+    c = 1
+    while len(str(b)) < len(text) * 3 + 100:
+        total = (a + b * num2_) * c
+        c = b
+        b = a
+        a = total
+    return b
+
+
+def shifter(plaintext, newnum, num2_, alphabet, forwards):
+    output_enc = ""
+    counter = 0
+    for msg in plaintext:
+        counter = counter + 2
+        if msg in alphabet:
+            key = int(newnum[counter:counter + 2])
+            if key > 96:
+                key = num2_
+            if not forwards:
+                key = key * (-1)
+            if key == 0:
+                new_alphabet = alphabet
+            elif key > 0:
+                new_alphabet = alphabet[key:] + alphabet[:key]
+            else:
+                new_alphabet = alphabet[(96 + key):] + alphabet[:(96 + key)]
+            encrypted = ""
+            for message_index in range(0, len(msg)):
+                if msg[message_index] == " ":
+                    encrypted += " "
+                for alphabet_index in range(0, len(new_alphabet)):
+                    if msg[message_index] == alphabet[alphabet_index]:
+                        encrypted += new_alphabet[alphabet_index]
+            output_enc += encrypted
+        else:
+            output_enc += msg
+
+    return output_enc
+
+
+def encrypt(text):
+    plaintext = base64.b85encode(zlib.compress(text.encode('utf-8'), 9)).decode('utf-8')
+    new_num = seed
+    while len(str(new_num)) < len(plaintext) * 3 + 100:  # todo revise more precise with analysed char data
+        new_num = new_num // 2 * new_num
+    new_num = str(new_num)
+    e_text = shifter(plaintext, new_num, num2, alpha1, True)
+    b = str(fib_iter(e_text, num2))
+    return shifter(e_text, b, num2, alpha2, True)
+
+
+def decrypt(e_text):
+    try:
+        b = str(fib_iter(e_text, num2))
+        d_txt = shifter(e_text, b, num2, alpha2, False)
+        new_num = seed
+        while len(str(new_num)) < len(d_txt) * 2 + 100:  # todo revise more precise with analysed char data
+            new_num = new_num // 2 * new_num
+        new_num = str(new_num)
+        output_end = shifter(d_txt, new_num, num2, alpha1, False).replace(" ", "")
+        return zlib.decompress(base64.b85decode(output_end)).decode('utf-8')
+    except:
+        print("[CND] " + e_text)
+        return "[CND]"

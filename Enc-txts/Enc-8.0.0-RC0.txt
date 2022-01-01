@@ -1,0 +1,105 @@
+from base64 import b85encode, b85decode
+from hashlib import sha512
+import random
+
+# enc 8.0.0
+ascii_set = """!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~¬ """
+
+def hex_gens(num):  # todo upgrade to generate random hex_base nums?
+    hex_gens_ = ""
+    while len(hex_gens_) != num:
+        hex_gens_ += random.choice(ascii_set)
+    return hex_gens_
+
+conversion_table = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: 'a',
+                    11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f', 16: "g", 17: "h", 18: "i", 19: "j", 20: "k",
+                    21: "l", 22: "m", 23: "n", 24: "o", 25: "p", 26: "q", 27: "r", 28: "s", 29: "t", 30: "u",
+                    31: "v", 32: "w", 33: "x", 34: "y", 35: "z", 36: "A", 37: 'B', 38: 'C', 39: 'D', 40: 'E',
+                    41: 'F', 42: "G", 43: "H", 44: "I", 45: "J", 46: "K", 47: "L", 48: "M", 49: "N", 50: "O",
+                    51: "P", 52: "Q", 53: "R", 54: "S", 55: "T", 56: "U", 57: "V", 58: "W", 59: "X", 60: "Y",
+                    61: "Z", 62: "¬", 63: "`", 64: "!", 65: "\"", 66: "£", 67: "$", 68: "%", 69: "^", 70: "&",
+                    71: "*", 72: "(", 73: ")", 74: "-", 75: " ", 76: "=", 77: "+", 78: "[", 79: "{", 80: "]",
+                    81: "}", 82: ";", 83: ":", 84: "'", 85: "@", 86: "#", 87: "~", 88: "\\", 89: "|", 90: ",",
+                    91: "<", 92: ".", 93: ">", 94: "/", 95: "?"}
+
+conversion_table_back = {v: k for k, v in conversion_table.items()}
+
+
+def to_hex(base_fr, base_to, hex_to_convert):
+    decimal = 0
+    power = len(hex_to_convert) - 1
+    for digit in hex_to_convert:
+        decimal += conversion_table_back[digit] * base_fr ** power
+        power -= 1
+    hexadecimal = ''
+    while decimal > 0:
+        remainder = decimal % base_to
+        hexadecimal = conversion_table[remainder] + hexadecimal
+        decimal = decimal // base_to
+    return hexadecimal
+
+
+def get_hex_base(hex_to_check):  # this is only a guess
+    for i in range(95):
+        hex_success_test = to_hex(i+2, i+2, hex_to_check)
+        if hex_success_test == hex_to_check:
+            return i+2
+
+
+def pass_to_seed(password, salt):  # todo output 2 salts not 1 (double security level)
+    salt = sha512(sha512(b85encode(salt.encode())).hexdigest().encode()).hexdigest()
+    inp = f"{salt[:64]}{password}{salt[64:]}"
+    sha = sha512(sha512(b85encode(inp.encode())).hexdigest().encode()).hexdigest()
+    return to_hex(16, 96, sha)
+
+
+def seed2_to_alpha(seeds):  # this function requires 192 numbers
+    alpha_gen = ascii_set
+    counter = 0
+    alpha = ""
+    while len(alpha_gen) > 1:
+        counter += 2
+        value = int(str(seeds)[counter:counter+2])*2
+        while value > len(alpha_gen) - 1:
+            value = value // 2
+        if len(str(seeds)[counter:]) < 2:
+            alpha += alpha_gen
+            alpha_gen = alpha_gen.replace(alpha_gen, "")
+        else:
+            chosen = alpha_gen[value]
+            alpha += chosen
+            alpha_gen = alpha_gen.replace(chosen, "")
+    return alpha
+
+def seed_to_data(seed, salt):
+    seed = int(to_hex(96, 16, seed), 36)
+    seed2 = int(to_hex(96, 16, pass_to_seed(str(seed), salt)), 36)
+    return seed2_to_alpha(seed), seed2_to_alpha(seed2), to_hex(10, 95, str(seed)), to_hex(10, 95, str(seed2))
+
+
+
+while True:
+    seed = pass_to_seed(hex_gens(100), hex_gens(100))
+    print(seed)
+    print(seed_to_data(seed, "new_salt_system"))
+    print()
+
+
+
+
+#def to_hex(base, decimal):
+#    hexadecimal = ''
+#    while decimal > 0:
+#        remainder = decimal % base
+#        hexadecimal = conversion_table[remainder] + hexadecimal
+#        decimal = decimal // base
+#    return hexadecimal
+
+
+#def to_dec(base, hex):
+#    decimal = 0
+#    power = len(hex) - 1
+#    for digit in hex:
+#        decimal += conversion_table_back[digit] * base ** power
+#        power -= 1
+#    return decimal

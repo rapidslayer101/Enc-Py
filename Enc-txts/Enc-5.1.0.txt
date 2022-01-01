@@ -1,0 +1,797 @@
+import base64, zlib
+from random import randint
+
+# charset def
+# accepts minimum of 35 chars
+# each char must be unique
+
+# custom alpha
+#alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/ "
+
+
+# standard all keys example, recommended
+alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/"
+
+
+# minimum example, not recommended
+#alphagens = "abcdefghijklmnopqrstuvwxyz123456789"
+
+alphalen = len(alphagens)
+
+
+def generator():
+    while True:
+        key_p1 = randint(100, 9000)
+        # key limit of 9215 for standard all keys example, use 9000 as standard limit
+
+        print(f"Keys: {key_p1}")
+
+        def enc_key(key):
+            run = 0
+            while True:
+                run = run + 1
+                try:
+                    rand_base_alpha = ''
+                    import random
+                    while True:
+                        alpha_new_char = random.choice(alphagens)
+                        if alpha_new_char not in rand_base_alpha:
+                            rand_base_alpha = rand_base_alpha + alpha_new_char
+                        elif len(rand_base_alpha) == alphalen:
+                            break
+
+                    conversion_table = []
+                    for i in rand_base_alpha:
+                        conversion_table.append(i)
+
+                    decimal = key
+                    old_decimal = decimal
+                    hexadecimal = ''
+
+                    while (decimal > 0):
+                        remainder = decimal % alphalen
+                        hexadecimal = conversion_table[remainder] + hexadecimal
+                        decimal = decimal // alphalen
+
+                    conversion_table = {}
+                    cvtable_counter = 0
+                    for i in rand_base_alpha:
+                        conversion_table.__setitem__(i, cvtable_counter)
+                        cvtable_counter = cvtable_counter + 1
+
+                    hexadecimal = hexadecimal.strip().upper()
+                    decimal = 0
+
+                    power = len(hexadecimal) - 1
+
+                    for digit in hexadecimal:
+                        decimal += conversion_table[digit] * alphalen ** power
+                        power -= 1
+
+                    if decimal == old_decimal:
+                        break
+                except:
+                    print("crashed")
+
+            print("")
+            print(f"Decimal: {old_decimal}")
+            print(f"Hex: {hexadecimal}")
+            print(f"Base: {alphalen}")
+            print(f"Alpha: {rand_base_alpha}")
+            print(f"Runs required: {run}")
+
+            return rand_base_alpha + hexadecimal
+
+        key = enc_key(key_p1)
+        master_key = key
+        print(master_key)
+
+        p1_key = master_key[:alphalen]
+        p1_e = master_key[alphalen:alphalen+2]
+
+        def mkey_to_num(alpha, e):
+            conversion_table = {}
+            cvtable_counter = 0
+            for i in alpha:
+                conversion_table.__setitem__(i, cvtable_counter)
+                cvtable_counter = cvtable_counter + 1
+
+            hexadecimal = e.strip().upper()
+            decimal = 0
+
+            power = len(hexadecimal) - 1
+
+            for digit in hexadecimal:
+                decimal += conversion_table[digit] * alphalen ** power
+                power -= 1
+
+            return decimal
+
+        num1 = mkey_to_num(alpha=p1_key, e=p1_e)
+
+        if num1 == key_p1:
+            print("")
+            print("SUCCESS, a master key has been generated")
+
+            def alpha_make():
+
+                rand_base_alpha = ''
+                import random
+                while True:
+                    alpha_new_char = random.choice(alphagens)
+                    if alpha_new_char not in rand_base_alpha:
+                        rand_base_alpha = rand_base_alpha + alpha_new_char
+                    elif len(rand_base_alpha) == alphalen:
+                        break
+                return rand_base_alpha
+
+            rand_alpha1 = alpha_make()
+            rand_alpha2 = alpha_make()
+
+            master_key = rand_alpha1 + master_key + rand_alpha2
+            master_key = base64.b64encode(zlib.compress(master_key.encode('utf-8'), 9)).decode('utf-8').replace("=", "")
+            with open("mkey.txt", "w", encoding="utf-8") as f:
+                f.write(master_key)
+            break
+    return master_key, num1, rand_alpha1, rand_alpha2
+
+
+## KEY OPTIONS
+
+print("Input a key below, if this is left blank a key will automatically generate")
+master_key = input("Key: ")
+if master_key == "":
+    key_data = generator()
+
+    master_key = key_data[0]
+    num1 = key_data[1]
+    alpha1 = key_data[2]
+    alpha2 = key_data[3]
+
+    with open("enc-num.txt", "w", encoding="utf-8") as f:
+        f.write(f"{num1}")
+
+
+## KEY OPTIONS
+
+
+print("")
+print(master_key)
+print("")
+
+# end gen segment
+
+
+import os, time, re
+from base64 import b64decode
+from zlib import decompress
+from random import randint
+from datetime import datetime
+
+
+def b64echeck(master_key):
+    while True:
+        if len(master_key) % 4 == 0:
+            break
+        else:
+            master_key = master_key + "="
+    return master_key
+
+
+def clear(): os.system('cls')
+
+
+def warn(text):
+    print(f"[!] [{date_now()}] {text}")
+
+
+def search(data, filter_fr, filter_to):
+    data = str(data)
+    m = re.search(f"""{filter_fr}(.+?){filter_to}""", data)
+    if m:
+        output = m.group(1)
+    else:
+        output = None
+    return output
+
+
+def new_key(master_key):
+    def key_test(master_key):
+
+        p0_alpha = master_key[:alphalen]
+        p1_key = master_key[alphalen:alphalen*2]
+        p1_e = master_key[alphalen*2:alphalen*2+1]
+        p3_alpha = master_key[alphalen*2+2:]
+
+        def mkey_to_num(alpha, e):
+            conversion_table = {}
+            cvtable_counter = 0
+            for i in alpha:
+                conversion_table.__setitem__(i, cvtable_counter)
+                cvtable_counter = cvtable_counter + 1
+
+            hexadecimal = e.strip().upper()
+            decimal = 0
+
+            power = len(hexadecimal) - 1
+
+            for digit in hexadecimal:
+                decimal += conversion_table[digit] * alphalen ** power
+                power -= 1
+
+            return decimal
+
+        num1 = mkey_to_num(alpha=p1_key, e=p1_e)
+
+        return num1, p0_alpha, p3_alpha
+
+    master_key = decompress(b64decode(b64echeck(master_key))).decode('utf-8')
+    key_data = key_test(master_key)
+
+    old_key = master_key[alphalen:]
+
+    p1_key = old_key[:alphalen]
+    p1_e = old_key[alphalen:alphalen+1]
+
+    def mkey_to_num(alpha, e):
+        conversion_table = {}
+        cvtable_counter = 0
+        for i in alpha:
+            conversion_table.__setitem__(i, cvtable_counter)
+            cvtable_counter = cvtable_counter + 1
+
+        hexadecimal = e.strip().upper()
+        decimal = 0
+
+        power = len(hexadecimal) - 1
+
+        for digit in hexadecimal:
+            decimal += conversion_table[digit] * alphalen ** power
+            power -= 1
+
+        return decimal
+
+    num1 = mkey_to_num(alpha=p1_key, e=p1_e)
+
+    p0_alpha = key_data[1]
+    p3_alpha = key_data[2]
+
+    with open("enc-num.txt", "w", encoding="utf-8") as f:
+        f.write(f"{num1}")
+
+    with open("enc-alpha.txt", "w", encoding="utf-8") as f:
+        f.write(f"{p0_alpha}{p3_alpha}")
+
+
+new_key(master_key)
+
+
+def encrypt(plaintext):
+    type_file = 0
+    if plaintext.startswith("C:\\"):
+        type_file = 1
+        plaintext = plaintext.replace("\\", "/")
+        with open(plaintext) as f:
+            plaintext = f.read()
+    plaintext = base64.b64encode(zlib.compress(plaintext.encode('utf-8'), 9)).decode('utf-8').replace("=", "")
+
+    try:
+        with open("enc-num.txt") as f:
+            num2 = int(str(f.readlines())[2:-2])
+
+        with open("enc-alpha.txt", encoding="utf-8") as f:
+            for line in f.readlines():
+                alpha1 = line[:alphalen]
+                alpha2 = line[alphalen:]
+
+        while True:
+            global prime_numbers
+            counter = 0
+            for i in plaintext:
+                counter = counter + 1
+
+            def get_prime_number():
+                prime_numbers = []
+                candidate = randint(100000, 800000)
+                while True:
+                    if candidate <= 3:
+                        prime_numbers.append(candidate)
+                        yield candidate
+
+                    is_prime = True
+                    for prime_num in prime_numbers:
+                        if candidate % prime_num == 0:
+                            is_prime = False
+                            break
+
+                    if is_prime:
+                        prime_numbers.append(candidate)
+                        yield candidate
+
+                    candidate += 1
+
+            prime_numbers = get_prime_number()
+            while True:
+                if next(prime_numbers) > 100000:
+                    if randint(1, 1000) == 1:
+                        num = next(prime_numbers)
+                        break
+            newnum = ""
+            for i in range(counter):
+                newnum = str(newnum) + str(next(prime_numbers))
+            outputenc = ""
+            counter = 0
+            for i in plaintext:
+                counter = counter + 2
+                alphabet = alpha1
+                msg = i
+                if msg in alphabet:
+                    key = newnum[counter:counter + 2]
+                    key = int(key)
+                    if key > alphalen:
+                        key = num2
+                    if key == 0:
+                        newAlphabet = alphabet
+                    elif key > 0:
+                        partialOne = alphabet[:key]
+                        partialTwo = alphabet[key:]
+                        newAlphabet = partialTwo + partialOne
+                    else:
+                        partialOne = alphabet[:(alphalen + key)]
+                        partialTwo = alphabet[(alphalen + key):]
+                        newAlphabet = partialTwo + partialOne
+                    encrypted = ""
+                    for message_index in range(0, len(msg)):
+                        if msg[message_index] == " ":
+                            encrypted += " "
+                        for alphabet_index in range(0, len(newAlphabet)):
+                            if msg[message_index] == alphabet[alphabet_index]:
+                                encrypted += newAlphabet[alphabet_index]
+                    outputenc = outputenc + encrypted
+                else:
+                    print(f"Ignored char: {msg}")
+                    outputenc = outputenc + msg
+                num = str(num).replace("0", "g").replace("1", "e").replace("2", "k").replace("3", "i").replace("4", "u") \
+                    .replace("5", "d").replace("6", "r").replace("7", "w").replace("8", "q").replace("9", "p")
+
+            etext = num + outputenc
+
+            counter = 0
+            for i in etext:
+                counter = counter + 1
+            content = str(etext[:6]).replace("g", "0").replace("e", "1").replace("k", "2").replace("i", "3")\
+            .replace("u", "4").replace("d", "5").replace("r", "6").replace("w", "7").replace("q", "8").replace("p", "9")
+
+            def get_prime_number():
+                prime_numbers = []
+                candidate = int(content)
+                while True:
+                    if candidate <= 3:
+                        prime_numbers.append(candidate)
+                        yield candidate
+
+                    is_prime = True
+                    for prime_num in prime_numbers:
+                        if candidate % prime_num == 0:
+                            is_prime = False
+                            break
+
+                    if is_prime:
+                        prime_numbers.append(candidate)
+                        yield candidate
+
+                    candidate += 1
+
+            prime_numbers = get_prime_number()
+            while True:
+                x = next(prime_numbers)
+                if x == int(content):
+                    num = x
+                    break
+            newnum = ""
+            for i in range(counter):
+                newnum = str(newnum) + str(next(prime_numbers))
+            counter = 0
+            outputend = ""
+            for letter in etext[6:]:
+                counter = counter + 2
+                alphabet = alpha1
+                msg = letter
+                if msg in alphabet:
+                    key = newnum[counter:counter + 2]
+                    key = int(key)
+                    if key > alphalen:
+                        key = num2
+                    key = key - key - key
+                    if key == 0:
+                        newAlphabet = alphabet
+                    elif key > 0:
+                        partialOne = alphabet[:key]
+                        partialTwo = alphabet[key:]
+                        newAlphabet = partialTwo + partialOne
+                    else:
+                        partialOne = alphabet[:(alphalen + key)]
+                        partialTwo = alphabet[(alphalen + key):]
+                        newAlphabet = partialTwo + partialOne
+                    encrypted = ""
+                    for message_index in range(0, len(msg)):
+                        if msg[message_index] == " ":
+                            encrypted += " "
+                        for alphabet_index in range(0, len(newAlphabet)):
+                            if msg[message_index] == alphabet[alphabet_index]:
+                                encrypted += newAlphabet[alphabet_index]
+                    outputend = outputend + encrypted
+                else:
+                    outputend = outputend + msg
+
+            if outputend == plaintext:
+                break
+
+        # encrypt part 2
+
+        while True:
+
+            outputenc = ""
+            counter = 0
+
+            def fib_iter():
+                a = 1
+                b = 1
+                c = 1
+                while len(str(b)) < len(etext)*2:
+                    total = (a + b * num2) * c
+                    c = b
+                    b = a
+                    a = total
+                return b
+
+            b = str(fib_iter())
+
+            for msg in etext:
+                counter = counter + 2
+                alphabet = alpha2
+                if msg in alphabet:
+                    key = b[counter:counter + 2]
+                    key = int(key)
+                    if key > alphalen:
+                        key = num2
+                    if key == 0:
+                        newAlphabet = alphabet
+                    elif key > 0:
+                        partialOne = alphabet[:key]
+                        partialTwo = alphabet[key:]
+                        newAlphabet = partialTwo + partialOne
+                    else:
+                        partialOne = alphabet[:(alphalen + key)]
+                        partialTwo = alphabet[(alphalen + key):]
+                        newAlphabet = partialTwo + partialOne
+                    encrypted = ""
+                    for message_index in range(0, len(msg)):
+                        if msg[message_index] == " ":
+                            encrypted += " "
+                        for alphabet_index in range(0, len(newAlphabet)):
+                            if msg[message_index] == alphabet[alphabet_index]:
+                                encrypted += newAlphabet[alphabet_index]
+                    outputenc = outputenc + encrypted
+                else:
+                    outputenc = outputenc + msg
+
+            etext2 = outputenc
+
+            counter = 0
+            outputend = ""
+            for letter in etext2:
+                counter = counter + 2
+                alphabet = alpha2
+                msg = letter
+                if msg in alphabet:
+                    key = b[counter:counter + 2]
+                    key = int(key)
+                    if key > alphalen:
+                        key = num2
+                    key = key - key - key
+                    if key == 0:
+                        newAlphabet = alphabet
+                    elif key > 0:
+                        partialOne = alphabet[:key]
+                        partialTwo = alphabet[key:]
+                        newAlphabet = partialTwo + partialOne
+                    else:
+                        partialOne = alphabet[:(alphalen + key)]
+                        partialTwo = alphabet[(alphalen + key):]
+                        newAlphabet = partialTwo + partialOne
+                    encrypted = ""
+                    for message_index in range(0, len(msg)):
+                        if msg[message_index] == " ":
+                            encrypted += " "
+                        for alphabet_index in range(0, len(newAlphabet)):
+                            if msg[message_index] == alphabet[alphabet_index]:
+                                encrypted += newAlphabet[alphabet_index]
+                    outputend = outputend + encrypted
+                else:
+                    outputend = outputend + msg
+
+            if outputend == etext:
+                break
+
+        if type_file == 1:
+            print("Name the file to save data in")
+            with open(input("Name: "), "w") as f:
+                f.write(etext2)
+
+        if type_file == 0:
+            return etext2
+    except:
+        print("Encryption error")
+
+
+def decrypt(enc_text):
+    type_file = 0
+    if enc_text.startswith("C:\\"):
+        type_file = 1
+        enc_text = enc_text.replace("\\", "/")
+        print(enc_text)
+        with open(enc_text) as f:
+            enc_text = f.read()
+            print(enc_text)
+    try:
+        with open("enc-num.txt") as f:
+            num2 = int(str(f.readlines())[2:-2])
+
+        with open("enc-alpha.txt", encoding="utf-8") as f:
+            for line in f.readlines():
+                alpha1 = line[:alphalen]
+                alpha2 = line[alphalen:]
+
+        def fib_iter():
+            a = 1
+            b = 1
+            c = 1
+            while len(str(b)) < len(enc_text)*2:
+                total = (a + b * num2) * c
+                c = b
+                b = a
+                a = total
+            return b
+
+        b = str(fib_iter())
+
+        counter = 0
+        outputend = ""
+        for letter in enc_text:
+            counter = counter + 2
+            alphabet = alpha2
+            msg = letter
+            if msg in alphabet:
+                key = b[counter:counter + 2]
+                key = int(key)
+                if key > alphalen:
+                    key = num2
+                key = key - key - key
+                if key == 0:
+                    newAlphabet = alphabet
+                elif key > 0:
+                    partialOne = alphabet[:key]
+                    partialTwo = alphabet[key:]
+                    newAlphabet = partialTwo + partialOne
+                else:
+                    partialOne = alphabet[:(alphalen + key)]
+                    partialTwo = alphabet[(alphalen + key):]
+                    newAlphabet = partialTwo + partialOne
+                encrypted = ""
+                for message_index in range(0, len(msg)):
+                    if msg[message_index] == " ":
+                        encrypted += " "
+                    for alphabet_index in range(0, len(newAlphabet)):
+                        if msg[message_index] == alphabet[alphabet_index]:
+                            encrypted += newAlphabet[alphabet_index]
+                outputend = outputend + encrypted
+            else:
+                outputend = outputend + msg
+
+        dtext = outputend
+
+        counter = 0
+        for i in dtext:
+            counter = counter + 1
+        content = str(dtext[:6]).replace("g", "0").replace("e", "1").replace("k", "2").replace("i", "3") \
+            .replace("u", "4").replace("d", "5").replace("r", "6").replace("w", "7").replace("q", "8").replace("p", "9")
+
+        def get_prime_number():
+            prime_numbers = []
+            candidate = int(content)
+            while True:
+                if candidate <= 3:
+                    prime_numbers.append(candidate)
+                    yield candidate
+
+                is_prime = True
+                for prime_num in prime_numbers:
+                    if candidate % prime_num == 0:
+                        is_prime = False
+                        break
+
+                if is_prime:
+                    prime_numbers.append(candidate)
+                    yield candidate
+
+                candidate += 1
+
+        prime_numbers = get_prime_number()
+        while True:
+            x = next(prime_numbers)
+            if x == int(content):
+                num = x
+                break
+        newnum = ""
+        for i in range(counter):
+            newnum = str(newnum) + str(next(prime_numbers))
+        counter = 0
+        outputend = ""
+        for letter in dtext[6:]:
+            counter = counter + 2
+            alphabet = alpha1
+            msg = letter
+            if msg in alphabet:
+                key = newnum[counter:counter + 2]
+                key = int(key)
+                if key > alphalen:
+                    key = num2
+                key = key - key - key
+                if key == 0:
+                    newAlphabet = alphabet
+                elif key > 0:
+                    partialOne = alphabet[:key]
+                    partialTwo = alphabet[key:]
+                    newAlphabet = partialTwo + partialOne
+                else:
+                    partialOne = alphabet[:(alphalen + key)]
+                    partialTwo = alphabet[(alphalen + key):]
+                    newAlphabet = partialTwo + partialOne
+                encrypted = ""
+                for message_index in range(0, len(msg)):
+                    if msg[message_index] == " ":
+                        encrypted += " "
+                    for alphabet_index in range(0, len(newAlphabet)):
+                        if msg[message_index] == alphabet[alphabet_index]:
+                            encrypted += newAlphabet[alphabet_index]
+                outputend = outputend + encrypted
+            else:
+                outputend = outputend + msg
+
+        if type_file == 1:
+            print("Name the file to save data in")
+            with open(input("Name: "), "w") as f:
+                f.write(decompress(b64decode(b64echeck(outputend))).decode('utf-8'))
+
+        if type_file == 0:
+            return decompress(b64decode(b64echeck(outputend))).decode('utf-8')
+    except:
+        return "[CND] " + enc_text
+
+# jump
+
+
+# 0.1 created encryption algorithm
+# 0.2 created rchat end to end application
+# 0.3 created file sending system
+# 0.4 created auto update, mkey sending
+# 0.5 created e+ and improved e
+
+# 0.6 created file encryption system
+# 0.7 created UI
+
+# ports 8080, 5001
+# made by rapidslayer101
+
+clear()
+
+
+message_history = []
+
+
+def date_now(): return datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+
+
+print("loop entered")
+to_send = input("enc-5.0 > ")
+while True:
+    if to_send.lower() == "e":
+        while True:
+            allow_send = 1
+            to_send = input("enc-5.0 encrypt > ")
+            if to_send == "":
+                warn("You cannot send an empty message!")
+                allow_send = 0
+
+            if to_send.lower() == '-decrypt':
+                to_send = "d"
+                allow_send = 0
+                break
+
+            if to_send.lower() == '-quit':
+                quit()
+
+            if to_send.lower() == '-clear':
+                message_history = []
+                print(message_history)
+                to_send = " [CLEAR CACHE]"
+
+            if to_send.lower() == '-change mkey':
+                warn("changing this key means you wont be able to read any messages from the server"
+                     " or any client that has not entered this key. To reset this you will need to reopen your client")
+                new_mkey = input("Input new mkey: ")
+                to_send = f" [CHANGE MKEY]"
+                try:
+                    new_key(new_mkey)
+                except:
+                    warn("The key you entered is not valid")
+
+            if allow_send == 1:
+                #bflntxt = len(to_send)
+                text1 = decrypt(to_send)
+                if not text1.startswith("[CND] "):
+                    print(f"Messaged decrypts to: {text1}")
+                to_send = encrypt(to_send)
+                #aflntxt = len(to_send)
+                print(f"Messaged encrypts to: {to_send}")
+                #print(f"Length before and after: {bflntxt} --> {aflntxt}")
+                #print(f"Message is {round(aflntxt/bflntxt*100,2)}% its original size")
+
+                # tested that it can encrypt over itself and back, SUCCESS
+
+                #text = "hello"
+                #for i in range(20):
+                #    text = encrypt(text)
+                #print(text)
+                #for i in range(20):
+                #    text = decrypt(text)
+                #print(text)
+
+    if to_send.lower() == "d":
+        while True:
+            allow_send = 1
+            to_send = input("enc-5.0 decrypt > ")
+            if to_send == "":
+                warn("You cannot send an empty message!")
+                allow_send = 0
+
+            if to_send.lower() == '-encrypt':
+                to_send = "e"
+                allow_send = 0
+                break
+
+            if to_send.lower() == '-quit':
+                quit()
+
+            if to_send.lower() == '-clear':
+                message_history = []
+                print(message_history)
+                to_send = " [CLEAR CACHE]"
+
+            if to_send.lower() == '-change mkey':
+                warn("changing this key means you wont be able to read any messages from the server"
+                     " or any client that has not entered this key. To reset this you will need to reopen your client")
+                new_mkey = input("Input new mkey: ")
+                to_send = f" [CHANGE MKEY]"
+                try:
+                    new_key(new_mkey)
+                except:
+                    warn("The key you entered is not valid")
+
+            if allow_send == 1:
+                bflntxt = len(to_send)
+                text1 = decrypt(to_send)
+                if not text1.startswith("[CND] "):
+                    print(f"Messaged decrypts to: {text1}")
+                else:
+                    print("Message does not decrypt")
+
+# plans
+
+# add in key systems
+# conversion metrics # more of them
+# fix mkey switchers
+
+# fix conversion metrics
+# make high number counts supported

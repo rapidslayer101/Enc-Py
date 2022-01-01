@@ -1,0 +1,554 @@
+import base64, zlib, os, time, datetime
+from random import randint, choice
+
+start_time = time.time()
+def date_now(): return datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+
+
+global history_data
+history_data = [f"[{date_now()}] [RT {round(time.time() - start_time, 2)}s] Reading and checking settings"]
+
+# SETTINGS BELOW
+
+# charset def
+# accepts minimum of 35 chars, min of 85 suggested
+# each char must be unique
+
+alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/"
+
+hexlen = randint(4, 5)  # min 2, max of alphalen, use 4 or 5 for optimal key outcome size
+key_p1_len = randint(100, 9000)  # limit of 9215 for standard all keys example, use 9000 as standard limit
+
+
+# SETTINGS CHECKS BELOW
+
+alphalen = len(alphagens)
+
+if hexlen > alphalen:
+    print(f"The hexlen value is to large, there is a max of {alphalen} for this setup")
+    exit()
+
+if hexlen < 2:
+    print(f"The hexlen value is to small, the minimum is 2")
+    exit()
+
+# 3 key types
+# all data, an encryption key
+# standard decryption key
+# standard decryption key with its encrypted data
+history_data.append(f"[{date_now()}] [RT {round(time.time()-start_time,2)}s] Defining")  # DEFINING BELOW
+
+
+def clear(): os.system('cls')
+
+
+class history():
+    def add(self, append): history_data.append(f"[{date_now()}] [RT {round(time.time()-start_time,2)}s] {append}")
+
+    def print(self, amount):
+        clear()
+        if amount.lower() == "all":
+            for item in history_data:
+                print(item)
+        else:
+            time.sleep(0.01)
+            while len(history_data) > int(amount):
+                for item in history_data:
+                    print(item)
+                time.sleep(0.01)
+                clear()
+                history_data.pop(0)
+            for item in history_data:
+                print(item)
+
+    def add_print(self, text, amount):
+        history.add(0, text)
+        history.print(0, amount)
+
+
+def generator():
+    while True:
+        key_p1 = key_p1_len
+
+        def enc_key(key):
+            run = 0
+            while True:
+                run += 1
+                if run % 5 == 0 or run == 1:
+                    hexgens = ""
+                    while True:
+                        hexgens_add = choice(alphagens)
+                        if hexgens_add not in hexgens:
+                            hexgens = hexgens + hexgens_add
+                            if len(hexgens) == hexlen:
+                                break
+                try:
+                    rand_base_alpha = ''
+                    while True:
+                        alpha_new_char = choice(hexgens)
+                        if alpha_new_char not in rand_base_alpha:
+                            rand_base_alpha = rand_base_alpha + alpha_new_char
+                        elif len(rand_base_alpha) == hexlen:
+                            break
+
+                    conversion_table = []
+                    for i in rand_base_alpha:
+                        conversion_table.append(i)
+
+                    decimal = key
+                    old_decimal = decimal
+                    hexadecimal = ''
+
+                    while decimal > 0:
+                        remainder = decimal % hexlen
+                        hexadecimal = conversion_table[remainder] + hexadecimal
+                        decimal = decimal // hexlen
+
+                    conversion_table = {}
+                    cvtable_counter = 0
+                    for i in rand_base_alpha:
+                        conversion_table.__setitem__(i, cvtable_counter)
+                        cvtable_counter += 1
+
+                    hexadecimal = hexadecimal.strip().upper()
+                    decimal = 0
+                    power = len(hexadecimal) - 1
+
+                    for digit in hexadecimal:
+                        decimal += conversion_table[digit] * hexlen ** power
+                        power -= 1
+
+                    if decimal == old_decimal:
+                        break
+                except: xx = 0
+
+            return rand_base_alpha + hexadecimal
+
+        master_key = enc_key(key_p1)
+
+        p1_key = master_key[:hexlen]
+        p1_e = master_key[hexlen:]
+
+        conversion_table = {}
+        cvtable_counter = 0
+        for i in p1_key:
+            conversion_table.__setitem__(i, cvtable_counter)
+            cvtable_counter += 1
+
+        hexadecimal = p1_e.strip().upper()
+        num1 = 0
+
+        power = len(hexadecimal) - 1
+
+        for digit in hexadecimal:
+            num1 += conversion_table[digit] * hexlen ** power
+            power -= 1
+
+        if num1 == key_p1:
+            def alpha_make():
+                rand_base_alpha = ''
+                import random
+                while True:
+                    alpha_new_char = random.choice(alphagens)
+                    if alpha_new_char not in rand_base_alpha:
+                        rand_base_alpha = rand_base_alpha + alpha_new_char
+                    elif len(rand_base_alpha) == alphalen:
+                        break
+                return rand_base_alpha
+
+            rand_alpha1 = alpha_make()
+            rand_alpha2 = alpha_make()
+
+            master_key = rand_alpha1 + master_key + rand_alpha2
+            master_key = base64.b85encode(zlib.compress(master_key.encode('utf-8'), 9)).decode('utf-8')
+            break
+    return master_key, num1, rand_alpha1, rand_alpha2
+
+
+def shifter(plaintext, newnum, num, num2, alpha, replace, forwards):
+    outputenc = ""
+    counter = 0
+    for i in plaintext:
+        counter = counter + 2
+        alphabet = alpha
+        msg = i
+        if msg in alphabet:
+            key = newnum[counter:counter + 2]
+            key = int(key)
+            if key > alphalen:
+                key = num2
+            if not forwards:
+                key = key - key - key
+            if key == 0:
+                newAlphabet = alphabet
+            elif key > 0:
+                partialOne = alphabet[:key]
+                partialTwo = alphabet[key:]
+                newAlphabet = partialTwo + partialOne
+            else:
+                partialOne = alphabet[:(alphalen + key)]
+                partialTwo = alphabet[(alphalen + key):]
+                newAlphabet = partialTwo + partialOne
+            encrypted = ""
+            for message_index in range(0, len(msg)):
+                if msg[message_index] == " ":
+                    encrypted += " "
+                for alphabet_index in range(0, len(newAlphabet)):
+                    if msg[message_index] == alphabet[alphabet_index]:
+                        encrypted += newAlphabet[alphabet_index]
+            outputenc = outputenc + encrypted
+        else:
+            #print(f"Ignored char: {msg}")
+            outputenc = outputenc + msg
+
+        if replace:
+            num = str(num).replace("0", "g").replace("1", "e").replace("2", "k").replace("3", "i").replace("4", "u") \
+                .replace("5", "d").replace("6", "r").replace("7", "w").replace("8", "q").replace("9", "p")
+    if replace:
+        return num + outputenc
+    if not replace:
+        return outputenc
+
+
+def get_prime_number(candidate):
+    prime_numbers = []
+    while True:
+        if candidate <= 3:
+            prime_numbers.append(candidate)
+            yield candidate
+
+        is_prime = True
+        for prime_num in prime_numbers:
+            if candidate % prime_num == 0:
+                is_prime = False
+                break
+
+        if is_prime:
+            prime_numbers.append(candidate)
+            yield candidate
+
+        candidate += 1
+
+
+def fib_iter(text, num2, insert):
+    a = 1
+    b = 1
+    c = 1
+    last_update = time.time()
+    while len(str(b)) < len(text) * 2:
+        if time.time() - last_update > 0.1:
+            history.print(0, "all")
+            print(f"[{date_now()}] [RT {round(time.time() - start_time, 2)}s] Generating 1st {insert} shifters "
+                  f"{round(len(str(b))/(len(text)*2)*100, 2)}%")
+            last_update = time.time()
+        total = (a + b * num2) * c
+        c = b
+        b = a
+        a = total
+    history.add_print(0, f"Generating {insert} shifters 100%", "all")
+    return b
+
+
+def shifter_gen_loop(etext, insert):
+    newnum = ""
+    run = 0
+    last_update = time.time()
+    while len(newnum) < len(etext) * 2 + 100:
+        if time.time() - last_update > 0.1:
+            history.print(0, "all")
+            print(f"[{date_now()}] [RT {round(time.time() - start_time, 2)}s] "
+                  f"Generating {insert} shifters "
+                  f"{round(len(newnum) / (len(etext) * 2 + 100) * 100, 2)}%")
+            last_update = time.time()
+        run += 1
+        newnum = str(newnum) + str(next(prime_numbers))
+    history.add_print(0, "Generating 1st decrypt test shifters 100%", "all")
+    return newnum
+
+
+def encrypt(plaintext, num2, alpha1, alpha2):
+    type_file = 0
+    # is it a file checks
+    try:
+        # type ascii / utf-8 file
+        plaintext = plaintext.replace("\\", "/")
+        with open(plaintext) as f:
+            plaintext = f.read()
+        plaintext = base64.b85encode(zlib.compress(plaintext.encode('utf-8'), 9)).decode('utf-8')
+        type_file = 1
+    except:
+        try:
+            # type bytes file
+            plaintext = plaintext.replace("\\", "/")
+            with open(plaintext, "rb") as f:
+                plaintext = f.read()
+            plaintext = base64.b85encode(plaintext)
+            plaintext = str(plaintext)
+            type_file = 1
+        # type ascii / utf-8 text
+        except: plaintext = base64.b85encode(zlib.compress(plaintext.encode('utf-8'), 9)).decode('utf-8')
+
+    try:
+        while True:
+            global prime_numbers
+
+            prime_numbers = get_prime_number(randint(100000, 800000))
+            while True:
+                if next(prime_numbers) > 100000:
+                    if randint(1, 150) == 1:
+                        num = next(prime_numbers)
+                        break
+
+            newnum = shifter_gen_loop(plaintext, "1st encrypt")
+            etext = shifter(plaintext, newnum, num, num2, alpha1, True, True)
+
+            content = str(etext[:6]).replace("g", "0").replace("e", "1").replace("k", "2").replace("i", "3")\
+            .replace("u", "4").replace("d", "5").replace("r", "6").replace("w", "7").replace("q", "8").replace("p", "9")
+
+            prime_numbers = get_prime_number(int(content))
+            while True:
+                x = next(prime_numbers)
+                if x == int(content):
+                    num = x
+                    break
+
+            newnum = shifter_gen_loop(etext, "1st decrypt test")
+            outputend = shifter(etext[6:], newnum, num, num2, alpha1, False, False)
+
+            if outputend == plaintext:
+                break
+
+        # encrypt part 2
+
+        while True:
+            b = str(fib_iter(etext, num2, "2nd encrypt"))
+            etext2 = shifter(etext, b, num, num2, alpha2, False, True)
+            outputend = shifter(etext2, b, num, num2, alpha2, False, False)
+            if outputend == etext:
+                break
+
+        if type_file == 1:
+            print("Name the file to save data in")
+            with open(input("Name: "), "w") as f:
+                f.write(etext2)
+
+        if type_file == 0:
+            return etext2
+    except:
+        print("Encryption error")
+
+
+def decrypt(enc_text, num2, alpha1, alpha2):
+    type_file = 0
+    if enc_text.startswith("C:\\"):
+        type_file = 1
+        enc_text = enc_text.replace("\\", "/")
+        print(enc_text)
+        with open(enc_text) as f:
+            enc_text = f.read()
+            print(enc_text)
+    try:
+        b = str(fib_iter(enc_text, num2, "1st decrypt"))
+
+        num = 0
+        dtext = shifter(enc_text, b, num, num2, alpha2, False, False)
+
+        content = str(dtext[:6]).replace("g", "0").replace("e", "1").replace("k", "2").replace("i", "3") \
+            .replace("u", "4").replace("d", "5").replace("r", "6").replace("w", "7").replace("q", "8").replace("p", "9")
+
+        prime_numbers = get_prime_number(int(content))
+        while True:
+            x = next(prime_numbers)
+            if x == int(content):
+                num = x
+                break
+
+        newnum = ""
+        run = 0
+        while len(newnum) < len(dtext) * 2 + 100:
+            run += 1
+            newnum = str(newnum) + str(next(prime_numbers))
+            if run % 1000 == 0:
+                print(run, len(dtext), len(str(newnum)))
+
+        outputend = shifter(dtext[6:], newnum, num, num2, alpha1, False, False)
+
+        if type_file == 1:
+            file_save_type = input("name the type of data as either 'b' or 't' (bytes or text)")
+            if file_save_type == "b":
+                print("Name the file to save data in")
+                with open(input("Name: "), "wb") as f:
+                    f.write(b85decode(outputend))
+            if file_save_type == "t":
+                print("Name the file to save data in")
+                with open(input("Name: "), "w") as f:
+                    print(outputend)
+                    f.write(decompress(b85decode(outputend)).decode('utf-8'))
+
+        if type_file == 0:
+            return decompress(b85decode(outputend)).decode('utf-8')
+    except:
+        return "[CND] " + enc_text
+
+
+## KEY OPTIONS
+
+history.add_print(0, "Setup complete", "4")
+print()
+print("Input a key below, if this is left blank a key will automatically generate")
+master_key = input("Key: ")
+if not master_key == "":
+    xx = 0  # area to add manual key setting, for now separated to tester.py
+else:
+    history.add_print(0, "Key not manually set, generating a new key", "1")
+    key_data = generator()
+
+    master_key = key_data[0]
+    num1 = key_data[1]
+    alpha1 = key_data[2]
+    alpha2 = key_data[3]
+
+
+history.add_print(0, f"\n\nMASTER KEY:\n{master_key}\n", "2")
+
+# end gen segment
+
+import os, re
+from base64 import b85decode
+from zlib import decompress
+from random import randint
+
+
+def search(data, filter_fr, filter_to):
+    data = str(data)
+    m = re.search(f"""{filter_fr}(.+?){filter_to}""", data)
+    if m:
+        output = m.group(1)
+    else:
+        output = None
+    return output
+
+
+def convert(master_key):
+    master_key = decompress(b85decode(master_key)).decode('utf-8')
+    p0_alpha = master_key[:alphalen]
+    p1_key = master_key[alphalen:alphalen+hexlen]
+    p1_e = master_key[alphalen+hexlen:-alphalen]
+    p3_alpha = master_key[-alphalen:]
+
+    conversion_table = {}
+    cvtable_counter = 0
+    for i in p1_key:
+        conversion_table.__setitem__(i, cvtable_counter)
+        cvtable_counter += 1
+
+    hexadecimal = p1_e.strip().upper()
+    num1 = 0
+
+    power = len(hexadecimal) - 1
+
+    for digit in hexadecimal:
+        num1 += conversion_table[digit] * hexlen ** power
+        power -= 1
+
+    return p0_alpha, p3_alpha, num1
+
+
+print(convert(master_key))
+with open("enc-key.txt", "w", encoding="utf-8") as f:
+    f.write(master_key)
+
+while True:
+    to_send = input("\nenc-5.0 > ")
+    history.print(0, "4")
+    if to_send == "e":
+        break
+    if to_send == "d":
+        break
+while True:
+    if to_send.lower() == "e":
+        history.add_print(0, "Current loop: Encrypt", "1")
+        while True:
+            allow_send = 1
+            to_send = input("\nenc-5.0 encrypt > ")
+            history.add_print(0, "Current loop: Encrypt", "1")
+            if to_send == "":
+                print("You cannot send an empty message!")
+                allow_send = 0
+
+            if to_send.lower() == '-d':
+                to_send = "d"
+                allow_send = 0
+                break
+
+            if to_send.lower() == '-change mkey':
+                print("changing this key means you wont be able to read any messages from the server"
+                     " or any client that has not entered this key. To reset this you will need to reopen your client")
+                new_mkey = input("Input new mkey: ")
+                to_send = f" [CHANGE MKEY]"
+                try:
+                    convert(new_mkey)
+                    with open("enc-key.txt", "w", encoding="utf-8") as f:
+                        f.write(master_key)
+                except:
+                    print("The key you entered is not valid")
+
+            if allow_send == 1:
+                with open("enc-key.txt") as f:
+                    for line in f.readlines():
+                        master_key = line
+                mkey_data = convert(master_key)
+                alpha1 = mkey_data[0]
+                alpha2 = mkey_data[1]
+                num2 = mkey_data[2]
+                try:
+                    text1 = decrypt(to_send, num2, alpha1, alpha2)
+                    if not text1.startswith("[CND] "):
+                        print(f"Messaged decrypts to: {text1}")
+                except:
+                    xx = 0
+                to_send = encrypt(to_send, num2, alpha1, alpha2)
+                print(f"Messaged encrypts to: {to_send}")
+
+    if to_send.lower() == "d":
+        history.add_print(0, "Current loop: Decrypt", "1")
+        while True:
+            allow_send = 1
+            to_send = input("\nenc-5.0 decrypt > ")
+            history.add_print(0, "Current loop: Decrypt", "1")
+            if to_send == "":
+                print("You cannot send an empty message!")
+                allow_send = 0
+
+            if to_send.lower() == '-e':
+                to_send = "e"
+                allow_send = 0
+                break
+
+            if to_send.lower() == '-change mkey':
+                print("changing this key means you wont be able to read any messages from the server"
+                     " or any client that has not entered this key. To reset this you will need to reopen your client")
+                new_mkey = input("Input new mkey: ")
+                to_send = f" [CHANGE MKEY]"
+                try:
+                    convert(new_mkey)
+                    with open("enc-key.txt", "w", encoding="utf-8") as f:
+                        f.write(master_key)
+                except:
+                    print("The key you entered is not valid")
+
+            if allow_send == 1:
+                with open("enc-key.txt") as f:
+                    for line in f.readlines():
+                        master_key = line
+                mkey_data = convert(master_key)
+                alpha1 = mkey_data[0]
+                alpha2 = mkey_data[1]
+                num2 = mkey_data[2]
+
+                bflntxt = len(to_send)
+                text1 = decrypt(to_send, num2, alpha1, alpha2)
+                if not text1.startswith("[CND] "):
+                    print(f"Messaged decrypts to: {text1}")
+                else:
+                    print("Message does not decrypt")

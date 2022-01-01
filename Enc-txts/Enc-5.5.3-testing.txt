@@ -1,0 +1,128 @@
+import datetime
+import hashlib
+import random, base64
+
+
+def hexgens(num):
+    hexgens= ""
+    while len(hexgens) != num:
+        alphagens = "`1234567890-=¬!\"£$%^&*()_+qwertyuiop[]QWERTYUIOP{}asdfghjkl;'#ASDFGHJKL:@~\zxcvbnm,.|ZXCVBNM<>?/"
+        hexgens_add = random.choice(alphagens)
+        hexgens += hexgens_add
+    return hexgens
+
+
+BLOCKSIZE = 65536
+hasher = hashlib.sha512()
+with open('enc.py', 'rb') as f:
+    buf = f.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = f.read(BLOCKSIZE)
+salt = ""
+hash_disrupt = ""
+for i in hasher.hexdigest():
+    if i in "1234567890":  # extracts the numbers
+        hash_disrupt += i
+    else:  # extracts the letters
+        salt += i.replace("a", "2").replace("b", "3").replace("c", "5")\
+            .replace("d", "7").replace("e", "9").replace("f", "1")
+
+run = 0
+while True:
+    run += 1
+    x = str(int(hash_disrupt[::-1])/2) + input()
+    #x = str(int(hash_disrupt[::-1])/2) + hexgens(56)
+    value = base64.b85encode(x.encode())  # b85's the text
+    x = hashlib.sha512(value).hexdigest()  # hashes the b85
+    x = hashlib.sha512(x.encode()).hexdigest()  # hashes the hash
+
+    num = ""
+    letters = ""
+    for i in x:
+        if i in "1234567890":  # extracts the numbers
+            num += i
+        else:  # extracts the letters
+            letters += i
+
+    x = hashlib.sha512(letters.encode()).hexdigest()  # hashes the letters for more numbers
+
+    num2 = ""
+    letters2 = ""
+    for i in x:
+        if i in "1234567890":  # extracts the numbers
+            num2 += i
+        else:  # extracts the letters
+            letters2 += i.replace("a", "2").replace("b", "3").replace("c", "5")\
+                .replace("d", "7").replace("e", "9").replace("f", "1")
+
+    if not len(str(int(((num+num2[::-1])[::-1])[:128])-int(salt[:16])+int(salt[-16:]))) > 127:
+        num = int((num+letters2[-(128-len(str(num + num2))):]+num2[::-1])[::-1])-int(salt[:16])+int(salt[-16:])
+    else:
+        num = int(((num+num2[::-1])[::-1])[:128])-int(salt[:16])+int(salt[-16:])
+        print(num)
+
+
+# enc 5.5.3 does a char between 0.00003135468075, 0.0000317784711 (20 mill for last)
+
+
+import enc6 as enc
+#import matplotlib.pyplot as plt
+hexlen_ = 100
+
+success = True
+run = 0
+start = datetime.datetime.now()
+while True:
+    run += 1
+    hexgens = ""
+    while len(hexgens) != hexlen_:
+        hexgens_add = random.choice(alphagens)
+        hexgens += hexgens_add
+    encrypted = enc.encrypt(hexgens)
+    if run % 1000 == 0:
+        print(run*100, datetime.datetime.now()-start)
+    #print(run, hexgens, encrypted)
+    if not enc.decrypt(encrypted) == hexgens:
+        success = False
+        print("FALIURE", enc.decrypt(encrypted))
+        input()
+
+input()
+
+x = []
+z = []
+a = []
+b = []
+c = []
+hexlen_ = 0
+while True:
+    for i in range(250):
+        hexgens = ""
+        hexlen_ += 1
+        x.append(hexlen_)
+        z.append(hexlen_)
+        print(hexlen_)
+        for i in range(3):  # test enc 5.5.2
+            hexgens = ""
+            while len(hexgens) != hexlen_:
+                hexgens_add = random.choice(alphagens)
+                hexgens += hexgens_add
+            encrypted = enc.encrypt(hexgens)
+
+            if i == 0:
+                a.append(len(encrypted))
+            if i == 1:
+                b.append(len(encrypted))
+            if i == 2:
+                c.append(len(encrypted))
+
+        # test enc 6.0.0 here
+
+    plt.plot(x, z, label="text len")
+    plt.plot(x, a, label="line 1")
+    plt.plot(x, b, label="line 2")
+    plt.plot(x, c, label="line 3")
+    plt.legend()
+    plt.draw()
+    plt.show()
