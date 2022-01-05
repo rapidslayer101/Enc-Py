@@ -1,13 +1,13 @@
-import datetime, re, zipfile
+import datetime, re
 from time import time
 from os import path
 from random import choice
 from base64 import b85encode, b85decode
 from hashlib import sha512
 from zlib import compress, decompress
-from multiprocessing import Process, Pipe, Pool, cpu_count
+from multiprocessing import Pool, cpu_count
 
-# enc 9.1.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.2.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = """0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"""  # base85
 block_size = 2000000  # todo smart block size allocation
 
@@ -93,8 +93,6 @@ def shifter(plaintext, shift_num, alphabet, forwards):
     alphabet2 = alphabet*3
     output_enc = ""
     counter = 0
-
-    start = time()
     if forwards:
         for char in plaintext:
             counter += 2
@@ -103,8 +101,6 @@ def shifter(plaintext, shift_num, alphabet, forwards):
         for char in plaintext:
             counter += 2
             output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
-    print(time()-start)
-
     return output_enc
 
 
@@ -121,68 +117,86 @@ def get_file_size(file):
         return f"{round(file_size_kb,2)}KB"
 
 
-def encrypt_block(data, block_num, alpha, shift_num, send_end=None):
+def encrypt_block(data, block_num, alpha, shift_num, enc, send_end=None):
     print(f"Block {block_num} launched")
-    if type(data) == bytes:
-        enc_block = shifter(b85encode(compress(data, 9)).decode('utf-8'), str(shift_num), alpha, True)
-    else:
-        enc_block = shifter(b85encode(compress(data.encode('utf-8'), 9))
+    if enc == "enc":
+        if type(data) == bytes:
+            block = shifter(b85encode(compress(data, 9)).decode('utf-8'), str(shift_num), alpha, True)
+        else:
+            block = shifter(b85encode(compress(data.encode('utf-8'), 9))
                             .decode('utf-8'), str(shift_num), alpha, True)
+    if enc == "dec":
+        output_end = shifter(data, str(shift_num), alpha, False).replace(" ", "")
+        block = decompress(b85decode(output_end))
+        try:
+            block = block.decode('utf-8')
+        except UnicodeDecodeError:
+            pass
     print(f"Block {block_num} complete")
     if send_end:
-        send_end.send(enc_block)
+        send_end.send(block)
     else:
-        return enc_block
+        return block
 
 
-def encrypt(text, alpha, shift_num):  # todo, make multiprocess
-    run_type = "process"  # default is pool as its faster and uses less RAM
-
-    data_chunks_list = [text[i:i+block_size] for i in range(0, len(text), block_size)]
+def encrypt(text, alpha, shift_num, enc):
     shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
-    if len(data_chunks_list) == 1:
-        if type(text) == bytes:
-            plaintext = b85encode(compress(text, 9)).decode('utf-8')
+    if enc.lower() in ["enc", "dec"]:
+        if enc == "enc":
+            e_chunks = [text[i:i+block_size] for i in range(0, len(text), block_size)]
+        if enc == "dec":
+            if type(text) == list:
+                e_chunks = text
+            else:
+                e_chunks = text.split("¬")
+        if len(e_chunks) == 1:
+            if enc == "enc":
+                if type(text) == bytes:
+                    plaintext = b85encode(compress(text, 9)).decode('utf-8')
+                else:
+                    plaintext = b85encode(compress(text.encode('utf-8'), 9)).decode('utf-8')
+                while len(str(shift_num)) < len(plaintext)*2:
+                    shift_num += f"{int(str(shift_num)[-2048:], 36)}"
+                return shifter(plaintext, str(shift_num), alpha, True)
+            if enc == "dec":
+                while len(str(shift_num)) < len(text)*2:
+                    shift_num += f"{int(str(shift_num)[-2048:], 36)}"
+                output_end = shifter(text, str(shift_num), alpha, False).replace(" ", "")
+                try:
+                    output_end = decompress(b85decode(output_end)).decode('utf-8')
+                except UnicodeDecodeError:
+                    output_end = decompress(b85decode(output_end))
+                return output_end
         else:
-            plaintext = b85encode(compress(text.encode('utf-8'), 9)).decode('utf-8')
-        while len(str(shift_num)) < len(plaintext)*2:
-            shift_num += f"{int(str(shift_num)[-2048:], 36)}"
-        return shifter(plaintext, str(shift_num), alpha, True)
+            print(f"Launching {len(e_chunks)} threads")
+            while len(str(shift_num)) < block_size*2.5:
+                shift_num += f"{int(str(shift_num)[-2048:], 36)}"
+            pool = Pool(cpu_count())
+            result_objects = [pool.apply_async(encrypt_block, args=(e_chunks[x-1], x, alpha, shift_num, enc))
+                              for x in range(1, len(e_chunks)+1)]
+            pool.close()
+            if enc == "enc":
+                result_list = [x.get() for x in result_objects]
+                pool.join()
+                return result_list
+            if enc == "dec":
+                d_data = b""
+                for x in result_objects:
+                    new_data = x.get()
+                    try:
+                        d_data += new_data
+                    except TypeError:
+                        d_data = ""
+                        d_data += new_data
+                pool.join()
+                return d_data
     else:
-        print(f"Launching {len(data_chunks_list)} threads")
-        while len(str(shift_num)) < block_size*2.5:
-            shift_num += f"{int(str(shift_num)[-2048:], 36)}"
-
-    if run_type == "pool":
-        pool = Pool(cpu_count())
-        result_objects = [pool.apply_async(encrypt_block, args=(data_chunks_list[x-1], x, alpha, shift_num,))
-                          for x in range(1, len(data_chunks_list)+1)]
-        pool.close()
-        result_list = [x.get() for x in result_objects]
-        pool.join()
-
-    if run_type == "process":
-        loop = 0
-        threads = []
-        pipe_list = []
-        for chunk in data_chunks_list:
-            loop += 1
-            recv_end, send_end = Pipe(duplex=False)
-            t = Process(target=encrypt_block, args=(chunk, loop, alpha, shift_num, send_end,))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-            pipe_list.append(recv_end)
-        result_list = [x.recv() for x in pipe_list]
-        for thread in threads:
-            thread.join()
-
-    return result_list
+        print("ENCRYPTION CANCELLED! Enc type is neither 'enc' or 'dec' please change.")
 
 
 def encrypt_key(text, key, salt):
     alpha1, shift_num = seed_to_data(pass_to_seed(key, salt))
-    return encrypt(text, alpha1, shift_num)
+    return encrypt(text, alpha1, shift_num, "enc")
 
 
 def encrypt_file(file_to_enc, seed, file_output=None):
@@ -200,13 +214,11 @@ def encrypt_file(file_to_enc, seed, file_output=None):
             data_chunks = hash_file.read()
 
         alpha, shift_num = seed_to_data(seed)
-        result_list = encrypt(data_chunks, alpha, shift_num)
+        result_list = encrypt(data_chunks, alpha, shift_num, "enc")
 
         with open(file_output, "w", encoding="utf-8") as f:
             for e_block in result_list:
                 f.write(f"¬{e_block}")
-        #with zipfile.ZipFile(file_output, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        #   zip_file.writestr(file_output, data, zipfile.ZIP_DEFLATED)
         # todo show new "compressed" size
         print(f"ENCRYPTION COMPLETE OF {get_file_size(file_to_enc)} ({block_size}*{len(result_list)})"
               f" IN {round(time() - start, 2)}s")
@@ -214,88 +226,9 @@ def encrypt_file(file_to_enc, seed, file_output=None):
         print("Error", e)
 
 
-def decrypt_block(e_data, block_num, alpha, shift_num, send_end=None):
-    print(f"Block {block_num} launched")
-    output_end = shifter(e_data, str(shift_num), alpha, False).replace(" ", "")
-    d_data = decompress(b85decode(output_end))
-    try:
-        d_data = d_data.decode('utf-8')
-    except UnicodeDecodeError:
-        pass
-    print(f"Block {block_num} complete")
-    if send_end:
-        send_end.send(d_data)
-    else:
-        return d_data
-
-
-def decrypt(e_text, alpha, shift_num):  # todo, make multiprocess
-    run_type = "pool"  # default is pool as its faster and uses less RAM
-
-    if type(e_text) == list:
-        e_chunks = e_text
-    else:
-        e_chunks = e_text.split("¬")
-    shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
-    if len(e_chunks) == 1:
-        while len(str(shift_num)) < len(e_text)*2:
-            shift_num += f"{int(str(shift_num)[-2048:], 36)}"
-        output_end = shifter(e_text, str(shift_num), alpha, False).replace(" ", "")
-        try:
-            output_end = decompress(b85decode(output_end)).decode('utf-8')
-        except UnicodeDecodeError:
-            output_end = decompress(b85decode(output_end))
-        return output_end
-    else:
-        print(f"Launching {len(e_chunks)} threads")
-        while len(str(shift_num)) < block_size*2.5:
-            shift_num += f"{int(str(shift_num)[-2048:], 36)}"
-
-        if run_type == "pool":
-            pool = Pool(cpu_count())
-            result_objects = [pool.apply_async(decrypt_block, args=(e_chunks[x], x+1, alpha, shift_num,))
-                              for x in range(0, len(e_chunks))]
-            pool.close()
-            d_data = b""
-            for x in result_objects:
-                new_data = x.get()
-                try:
-                    d_data += new_data
-                except TypeError:
-                    d_data = ""
-                    d_data += new_data
-            pool.join()
-
-        if run_type == "process":
-            loop = 0
-            threads = []
-            pipe_list = []
-            for chunk in e_text:
-                if len(chunk) > 0:
-                    loop += 1
-                    recv_end, send_end = Pipe(duplex=False)
-                    t = Process(target=decrypt_block, args=(chunk, loop, alpha, shift_num, send_end,))
-                    t.daemon = True
-                    t.start()
-                    threads.append(t)
-                    pipe_list.append(recv_end)
-            d_data = b""
-            for x in pipe_list:
-                new_data = x.recv()
-                try:
-                    d_data += new_data
-                except TypeError:
-                    d_data = ""
-                    d_data += new_data
-            for thread in threads:
-                thread.join()
-
-    return d_data
-
-
 def decrypt_key(e_text, key, salt):
     alpha1, shift_num = seed_to_data(pass_to_seed(key, salt))
-    return decrypt(e_text, alpha1, shift_num)
+    return encrypt(e_text, alpha1, shift_num, "dec")
 
 
 def decrypt_file(file_to_dec, seed, file_output=None):  # todo rewrite decrypter
@@ -312,7 +245,7 @@ def decrypt_file(file_to_dec, seed, file_output=None):  # todo rewrite decrypter
         e_text = dec_file.read().split("¬")
 
     alpha, shift_num = seed_to_data(seed)
-    d_data = decrypt(e_text[1:], alpha, shift_num)
+    d_data = encrypt(e_text[1:], alpha, shift_num, "dec")
 
     if type(d_data) == bytes:
         with open(f"{file_output}", "wb") as f:
