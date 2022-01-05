@@ -5,8 +5,8 @@ import enclib as enc9_x
 
 if __name__ == '__main__':
     freeze_support()
-    #text = enc9_x.hex_gens(500000)
-    text = enc9_x.hex_gens(2000000)
+    text = enc9_x.hex_gens(1000000)
+    #text = enc9_x.hex_gens(100)
     #text = text*10
     print(f"TEXT {len(text)}")
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     enc8_t = False
     enc8_2_t = False
     enc8_5_t = False
-    enc8_6_t = True
+    enc8_6_t = False
     enc9_0_t = True
     enc9_x_t = True
 
@@ -110,11 +110,11 @@ if __name__ == '__main__':
             print("ENC9.x FAIL")
 
     seed = enc9_x.pass_to_seed("key", "salt")
-    input()
+    input("Inp")
     while True:
         #enc9_x.encrypt_file(input("Input file: "), seed, "enc.renc")
-        enc9_x.encrypt_file("Beacon.jar", seed, "enc.renc")
-        #enc9_x.encrypt_file("Cubase Projects.zip", seed, "enc.renc")
+        #enc9_x.encrypt_file("Beacon.jar", seed, "enc.renc")
+        enc9_x.encrypt_file("CubaseProjects.zip", seed, "enc.renc")
         input()
         #enc9_x.decrypt_file(input("Encrypted file: "), seed, input("Output file: "))
         enc9_x.decrypt_file("enc.renc", seed, "test")

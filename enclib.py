@@ -7,7 +7,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Process, Pipe, Pool, cpu_count
 
-# enc 9.0.3 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.1.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = """0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"""  # base85
 block_size = 2000000  # todo smart block size allocation
 
@@ -90,17 +90,21 @@ def seed_to_data(seed):
 
 
 def shifter(plaintext, shift_num, alphabet, forwards):
-    alphabet2 = alphabet*2
+    alphabet2 = alphabet*3
     output_enc = ""
     counter = 0
-    for char in plaintext:
-        counter += 2
-        key = int(shift_num[counter:counter+2])
-        if key > 84:
-            key = key-84
-        if not forwards:
-            key = key*(-1)
-        output_enc += alphabet2[alphabet.index(char)+key]
+
+    start = time()
+    if forwards:
+        for char in plaintext:
+            counter += 2
+            output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
+    else:
+        for char in plaintext:
+            counter += 2
+            output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
+    print(time()-start)
+
     return output_enc
 
 
@@ -132,7 +136,7 @@ def encrypt_block(data, block_num, alpha, shift_num, send_end=None):
 
 
 def encrypt(text, alpha, shift_num):  # todo, make multiprocess
-    run_type = "pool"  # default is pool as its faster and uses less RAM
+    run_type = "process"  # default is pool as its faster and uses less RAM
 
     data_chunks_list = [text[i:i+block_size] for i in range(0, len(text), block_size)]
     shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
@@ -151,8 +155,8 @@ def encrypt(text, alpha, shift_num):  # todo, make multiprocess
 
     if run_type == "pool":
         pool = Pool(cpu_count())
-        result_objects = [pool.apply_async(encrypt_block, args=(data_chunks_list[x - 1], x, alpha, shift_num,))
-                          for x in range(1, len(data_chunks_list) + 1)]
+        result_objects = [pool.apply_async(encrypt_block, args=(data_chunks_list[x-1], x, alpha, shift_num,))
+                          for x in range(1, len(data_chunks_list)+1)]
         pool.close()
         result_list = [x.get() for x in result_objects]
         pool.join()
