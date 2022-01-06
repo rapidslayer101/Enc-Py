@@ -105,20 +105,16 @@ if __name__ == '__main__':
         start = time.time()
         enc9_x_e = enc9_x.encrypt_key(text, "random_key", "salt")
         if enc9_x.decrypt_key(enc9_x_e, "random_key", "salt") == text:
-            print("ENC9.x", time.time()-start)
+            print("ENC9.2", time.time()-start)
         else:
-            print("ENC9.x FAIL")
+            print("ENC9.2 FAIL")
 
     seed = enc9_x.pass_to_seed("key", "salt")
     input("Inp")
     while True:
-        #enc9_x.encrypt_file(input("Input file: "), seed, "enc.renc")
-        #enc9_x.encrypt_file("Beacon.jar", seed, "enc.renc")
-        enc9_x.encrypt_file("CubaseProjects.zip", seed, "enc.renc")
+        enc9_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
         input()
-        #enc9_x.decrypt_file(input("Encrypted file: "), seed, input("Output file: "))
-        enc9_x.decrypt_file("enc.renc", seed, "test")
-        #enc9_x.decrypt_file("enc.renc", seed, "test.jar")
+        enc9_x.encrypt_file("dec", "enc.renc", seed, "test")
         input("Loop.")
 
     #import time

@@ -7,7 +7,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 9.3.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.2.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = """0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"""  # base85
 block_size = 2000000  # todo smart block size allocation
 
@@ -66,16 +66,16 @@ def pass_to_seed(password, salt):
     return to_hex(16, 96, sha512(sha512(b85encode(inp.encode())).hexdigest().encode()).hexdigest())
 
 
-def seed_to_alpha(seed):  # this function requires 171 numbers
+def seed2_to_alpha(seeds):  # this function requires 171 numbers
     alpha_gen = ascii_set
     counter = 0
     alpha = ""
     while len(alpha_gen) > 0:
         counter += 2
-        value = int(str(seed)[counter:counter+2])*2
+        value = int(str(seeds)[counter:counter+2])*2
         while value > len(alpha_gen)-1:
             value = value // 2
-        if len(str(seed)[counter:]) < 2:
+        if len(str(seeds)[counter:]) < 2:
             alpha += alpha_gen
             alpha_gen = alpha_gen.replace(alpha_gen, "")
         else:
@@ -86,7 +86,7 @@ def seed_to_alpha(seed):  # this function requires 171 numbers
 
 
 def seed_to_data(seed):
-    return seed_to_alpha(int(to_hex(96, 16, seed), 36)), to_hex(10, 96, str(int(to_hex(96, 16, seed), 36)))
+    return seed2_to_alpha(int(to_hex(96, 16, seed), 36)), to_hex(10, 96, str(int(to_hex(96, 16, seed), 36)))
 
 
 def shifter(plaintext, shift_num, alphabet, forwards):
@@ -108,23 +108,24 @@ def get_file_size(file):
     file_size_kb = path.getsize(file)/1024
     if file_size_kb > 9999:
         file_size_mb = file_size_kb/1024
-        if file_size_mb > 2999:
-            return f"{round(file_size_mb/1024,2)}GB"
+        if file_size_mb > 750:
+            print("This file is not supported due to its large size, the max is 750MB")
+            return "NOTSUP"
         else:
             return f"{round(file_size_mb,2)}MB"
     else:
         return f"{round(file_size_kb,2)}KB"
 
 
-def encrypt_block(enc, data, block_num, alpha, shift_num, send_end=None):
+def encrypt_block(data, block_num, alpha, shift_num, enc, send_end=None):
     print(f"Block {block_num} launched")
-    if enc.lower() in ["e", "en", "enc", "encrypt"]:
+    if enc == "enc":
         if type(data) == bytes:
             block = shifter(b85encode(compress(data, 9)).decode('utf-8'), str(shift_num), alpha, True)
         else:
             block = shifter(b85encode(compress(data.encode('utf-8'), 9))
                             .decode('utf-8'), str(shift_num), alpha, True)
-    else:
+    if enc == "dec":
         output_end = shifter(data, str(shift_num), alpha, False).replace(" ", "")
         block = decompress(b85decode(output_end))
         try:
@@ -138,18 +139,18 @@ def encrypt_block(enc, data, block_num, alpha, shift_num, send_end=None):
         return block
 
 
-def encrypt(enc, text, alpha, shift_num):
+def encrypt(text, alpha, shift_num, enc):
     shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
-    if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
-        if enc.lower() in ["e", "en", "enc", "encrypt"]:
+    if enc.lower() in ["enc", "dec"]:
+        if enc == "enc":
             e_chunks = [text[i:i+block_size] for i in range(0, len(text), block_size)]
-        else:
+        if enc == "dec":
             if type(text) == list:
                 e_chunks = text
             else:
                 e_chunks = text.split("¬")
         if len(e_chunks) == 1:
-            if enc.lower() in ["e", "en", "enc", "encrypt"]:
+            if enc == "enc":
                 if type(text) == bytes:
                     plaintext = b85encode(compress(text, 9)).decode('utf-8')
                 else:
@@ -157,7 +158,7 @@ def encrypt(enc, text, alpha, shift_num):
                 while len(str(shift_num)) < len(plaintext)*2:
                     shift_num += f"{int(str(shift_num)[-2048:], 36)}"
                 return shifter(plaintext, str(shift_num), alpha, True)
-            else:
+            if enc == "dec":
                 while len(str(shift_num)) < len(text)*2:
                     shift_num += f"{int(str(shift_num)[-2048:], 36)}"
                 output_end = shifter(text, str(shift_num), alpha, False).replace(" ", "")
@@ -171,12 +172,14 @@ def encrypt(enc, text, alpha, shift_num):
             while len(str(shift_num)) < block_size*2.5:
                 shift_num += f"{int(str(shift_num)[-2048:], 36)}"
             pool = Pool(cpu_count())
-            result_objects = [pool.apply_async(encrypt_block, args=(enc, e_chunks[x-1], x, alpha, shift_num))
+            result_objects = [pool.apply_async(encrypt_block, args=(e_chunks[x-1], x, alpha, shift_num, enc))
                               for x in range(1, len(e_chunks)+1)]
             pool.close()
             if enc == "enc":
-                d_data = [x.get() for x in result_objects]
-            else:
+                result_list = [x.get() for x in result_objects]
+                pool.join()
+                return result_list
+            if enc == "dec":
                 d_data = b""
                 for x in result_objects:
                     new_data = x.get()
@@ -185,58 +188,79 @@ def encrypt(enc, text, alpha, shift_num):
                     except TypeError:
                         d_data = ""
                         d_data += new_data
-            pool.join()
-            return d_data
+                pool.join()
+                return d_data
     else:
-        print("ENCRYPTION CANCELLED! Enc type not in 'e', 'en', 'enc', 'encrypt', 'd', 'de', 'dec', 'decrypt'")
+        print("ENCRYPTION CANCELLED! Enc type is neither 'enc' or 'dec' please change.")
 
 
 def encrypt_key(text, key, salt):
     alpha1, shift_num = seed_to_data(pass_to_seed(key, salt))
-    return encrypt("enc", text, alpha1, shift_num)
+    return encrypt(text, alpha1, shift_num, "enc")
 
 
-def encrypt_file(enc, file, seed, file_output=None):
+def encrypt_file(file_to_enc, seed, file_output=None):
     start = time()
-    if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
-        if path.exists(file):
-            file_name, file_type = file.split("/")[-1].split(".")
-            print(f"{file_name} is {get_file_size(file)}")
-            alpha, shift_num = seed_to_data(seed)
-            if enc.lower() in ["e", "en", "enc", "encrypt"]:
-                with open(file, 'rb') as hash_file:
-                    data_chunks = hash_file.read()
-                result_list = encrypt(enc, data_chunks, alpha, shift_num)
-                with open(file_output, "w", encoding="utf-8") as f:
-                    for e_block in result_list:
-                        f.write(f"¬{e_block}")
-                print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(result_list)})"
-                      f" IN {round(time() - start, 2)}s")  # todo show new "compressed" size
-            else:
-                with open(file, encoding="utf-8") as hash_file:
-                    e_text = hash_file.read().split("¬")
-                d_data = encrypt(enc, e_text[1:], alpha, shift_num)
-                if type(d_data) == bytes:
-                    with open(f"{file_output}", "wb") as f:
-                        f.write(d_data)
-                if type(d_data) == str:
-                    with open(f"{file_output}", "w", encoding="utf-8") as f:
-                        f.write(d_data.replace("\r", ""))
-                print(f"DECRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(e_text) - 1})"
-                      f" IN {round(time() - start, 2)}s")  # todo show new "compressed" size
+    if path.exists(file_to_enc):
+        file_name = file_to_enc.split("/")[-1]
+        if get_file_size(file_to_enc) == "NOTSUP":
+            return "File to large"
         else:
-            return "File not found"  # todo smart find alternative
+            print(f"{file_name} is {get_file_size(file_to_enc)}")
     else:
-        print("ENCRYPTION CANCELLED! Enc type not in 'e', 'en', 'enc', 'encrypt', 'd', 'de', 'dec', 'decrypt'")
+        return "File not found"  # todo smart find alternative
+    try:
+        with open(file_to_enc, 'rb') as hash_file:
+            data_chunks = hash_file.read()
+
+        alpha, shift_num = seed_to_data(seed)
+        result_list = encrypt(data_chunks, alpha, shift_num, "enc")
+
+        with open(file_output, "w", encoding="utf-8") as f:
+            for e_block in result_list:
+                f.write(f"¬{e_block}")
+        # todo show new "compressed" size
+        print(f"ENCRYPTION COMPLETE OF {get_file_size(file_to_enc)} ({block_size}*{len(result_list)})"
+              f" IN {round(time() - start, 2)}s")
+    except Exception as e:
+        print("Error", e)
 
 
 def decrypt_key(e_text, key, salt):
     alpha1, shift_num = seed_to_data(pass_to_seed(key, salt))
-    return encrypt("dec", e_text, alpha1, shift_num)
+    return encrypt(e_text, alpha1, shift_num, "dec")
+
+
+def decrypt_file(file_to_dec, seed, file_output=None):  # todo rewrite decrypter
+    start = time()
+    if path.exists(file_to_dec):
+        file_name, file_type = file_to_dec.split("/")[-1].split(".")
+        if file_type != "renc":
+            return "This is not a renc file"
+        else:
+            print(f"{file_name} is {get_file_size(file_to_dec)}")
+    else:
+        return "File not found"  # todo smart find alternative
+    with open(file_to_dec, encoding="utf-8") as dec_file:
+        e_text = dec_file.read().split("¬")
+
+    alpha, shift_num = seed_to_data(seed)
+    d_data = encrypt(e_text[1:], alpha, shift_num, "dec")
+
+    if type(d_data) == bytes:
+        with open(f"{file_output}", "wb") as f:
+            f.write(d_data)
+    if type(d_data) == str:
+        with open(f"{file_output}", "w", encoding="utf-8") as f:
+            f.write(d_data.replace("\r", ""))
+    # todo show new "compressed" size
+    print(f"DECRYPTION COMPLETE OF {get_file_size(file_to_dec)} ({block_size}*{len(e_text)-1})"
+          f" IN {round(time()-start, 2)}s")
 
 
 def search(data, filter_fr, filter_to):
-    m = re.search(f"""{filter_fr}(.+?){filter_to}""", str(data))
+    data = str(data)
+    m = re.search(f"""{filter_fr}(.+?){filter_to}""", data)
     if m:
         return m.group(1)
     else:
@@ -244,8 +268,11 @@ def search(data, filter_fr, filter_to):
 
 
 def get_links(data):
-    return ('\n'.join((re.findall(r'(https?://[^\s]+)', str(data))))) + \
-           ('\n'.join((re.findall(r'(http?://[^\s]+)', str(data)))))
+    a = (re.findall(r'(https?://[^\s]+)', str(data)))
+    b = (re.findall(r'(http?://[^\s]+)', str(data)))
+    c = ('\n'.join(a))
+    d = ('\n'.join(b))
+    return c+d
 
 
 def round_tme(dt=None, round_to=30):

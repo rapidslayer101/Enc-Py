@@ -7,5 +7,5 @@ print(enc.to_hex(96, 10, seed))
 print(enc.to_number(seed))
 
 print(enc.seed_to_data(seed))
-print(enc.hash_a_file("Cubase Projects.zip"))
+print(enc.hash_a_file("CubaseProjects.zip"))
 
