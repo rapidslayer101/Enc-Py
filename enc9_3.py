@@ -7,41 +7,9 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 9.3.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.3.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = """0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"""  # base85
 block_size = 2000000  # todo smart block size allocation
-
-
-def b85s_to_bits(s):
-    bin_data = ''.join(format(i, f'07b') for i in bytearray(s, encoding='utf-8'))
-    return int(bin_data, 2).to_bytes((len(bin_data)+7) // 8, 'big')
-
-
-def bits_to_b85s(b):
-    print(type(b))
-    b = bytearray(b, encoding="utf-8")
-    print(b)
-    #print(bytes(b[2:-1], encoding="utf-8"))
-    bin_data = bin(int.from_bytes(b, byteorder='big')).replace("0b", "")
-    print(bin_data)
-
-    def bits_to_string(bts):
-        b85s = ""
-        for i in range(0, len(bts), 7):
-            b85s += chr(int(bts[i:i+7], 2))
-        return b85s
-
-    b85s = bits_to_string(bin_data)
-    counter = 0
-    while True:
-        if b85s[counter] not in ascii_set:
-            b85s = bits_to_string(f"0{bin_data}")
-            break
-        if counter == len(b85s) - 1:
-            break
-        counter += 1
-    print(b85s)
-    return b85s
 
 
 def hex_gens(num):
@@ -71,7 +39,7 @@ def to_hex(base_fr, base_to, hex_to_convert):
     for digit in hex_to_convert:
         decimal += conv_dict_back[digit]*base_fr**power
         power -= 1
-    hexadecimal = ""
+    hexadecimal = ''
     while decimal > 0:
         remainder = decimal % base_to
         hexadecimal = conv_dict[remainder]+hexadecimal
@@ -104,7 +72,7 @@ def seed_to_alpha(seed):  # this function requires 171 numbers
     alpha = ""
     while len(alpha_gen) > 0:
         counter += 2
-        value = int(str(seed)[counter:counter + 2]) << 1
+        value = int(str(seed)[counter:counter+2])*2
         while value > len(alpha_gen)-1:
             value = value // 2
         if len(str(seed)[counter:]) < 2:
@@ -129,9 +97,7 @@ def shifter(plaintext, shift_num, alphabet, forwards):
         for char in plaintext:
             counter += 2
             output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
-        output_enc = b85s_to_bits(output_enc)
     else:
-        output_enc = bits_to_b85s(output_enc)
         for char in plaintext:
             counter += 2
             output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
@@ -178,22 +144,21 @@ def encrypt(enc, text, alpha, shift_num):
         if enc.lower() in ["e", "en", "enc", "encrypt"]:
             e_chunks = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         else:
-            print(text)
             if type(text) == list:
                 e_chunks = text
             else:
-                e_chunks = text.split(b"\\\\\\")
+                e_chunks = text.split("¬")
         if len(e_chunks) == 1:
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 if type(text) == bytes:
                     plaintext = b85encode(compress(text, 9)).decode('utf-8')
                 else:
                     plaintext = b85encode(compress(text.encode('utf-8'), 9)).decode('utf-8')
-                while len(str(shift_num)) < len(plaintext) << 1:
+                while len(str(shift_num)) < len(plaintext)*2:
                     shift_num += f"{int(str(shift_num)[-2048:], 36)}"
                 return shifter(plaintext, str(shift_num), alpha, True)
             else:
-                while len(str(shift_num)) < len(text) << 1:
+                while len(str(shift_num)) < len(text)*2:
                     shift_num += f"{int(str(shift_num)[-2048:], 36)}"
                 output_end = shifter(text, str(shift_num), alpha, False).replace(" ", "")
                 try:
