@@ -1,3 +1,5 @@
+import codecs
+import sys
 import time
 from multiprocessing import freeze_support
 import enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
@@ -5,7 +7,7 @@ import enclib as enc10_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc10_x.hex_gens(1000)
+    text = enc10_x.hex_gens(1000000)
     #text = enc9_x.hex_gens(100)
     #text = text*10
     print(f"TEXT {len(text)}")
@@ -20,7 +22,7 @@ if __name__ == '__main__':
     enc8_2_t = False
     enc8_5_t = False
     enc8_6_t = False
-    enc9_0_t = True
+    enc9_0_t = False
     enc9_3_t = True
     enc10_x_t = True
 
@@ -58,7 +60,7 @@ if __name__ == '__main__':
         start = time.time()
         enc7_e = enc7.encrypt_key(text, "random_key", "salt")
         if enc7.decrypt_key(enc7_e, "random_key", "salt") == text:
-            print("ENC7.0", time.time()-start)
+            print("ENC7.0", time.time()-start, len(enc7_e), sys.getsizeof(enc7_e))
         else:
             print("ENC7.0 FAIL")
 
@@ -66,7 +68,7 @@ if __name__ == '__main__':
         start = time.time()
         enc8_e = enc8.encrypt_key(text, "random_key", "salt")
         if enc8.decrypt_key(enc8_e, "random_key", "salt") == text:
-            print("ENC8.0", time.time()-start)
+            print("ENC8.0", time.time()-start, len(enc8_e), sys.getsizeof(enc8_e))
         else:
             print("ENC8.0 FAIL")
 
@@ -74,7 +76,7 @@ if __name__ == '__main__':
         start = time.time()
         enc8_2_e = enc8_2.encrypt_key(text, "random_key", "salt")
         if enc8_2.decrypt_key(enc8_2_e, "random_key", "salt") == text:
-            print("ENC8.2", time.time()-start)
+            print("ENC8.2", time.time()-start, len(enc8_2_e), sys.getsizeof(enc8_2_e))
         else:
             print("ENC8.2 FAIL")
 
@@ -82,7 +84,7 @@ if __name__ == '__main__':
         start = time.time()
         enc8_5_e = enc8_5.encrypt_key(text, "random_key", "salt")
         if enc8_5.decrypt_key(enc8_5_e, "random_key", "salt") == text:
-            print("ENC8.5", time.time()-start)
+            print("ENC8.5", time.time()-start, len(enc8_5_e), sys.getsizeof(enc8_5_e))
         else:
             print("ENC8.5 FAIL")
 
@@ -90,7 +92,7 @@ if __name__ == '__main__':
         start = time.time()
         enc8_6_e = enc8_6.encrypt_key(text, "random_key", "salt")
         if enc8_6.decrypt_key(enc8_6_e, "random_key", "salt") == text:
-            print("ENC8.6", time.time()-start)
+            print("ENC8.6", time.time()-start, len(enc8_6_e), sys.getsizeof(enc8_6_e))
         else:
             print("ENC8.6 FAIL")
 
@@ -98,7 +100,7 @@ if __name__ == '__main__':
         start = time.time()
         enc9_0_e = enc9_0.encrypt_key(text, "random_key", "salt")
         if enc9_0.decrypt_key(enc9_0_e, "random_key", "salt") == text:
-            print("ENC9.0", time.time()-start)
+            print("ENC9.0", time.time()-start, len(enc9_0_e), sys.getsizeof(enc9_0_e))
         else:
             print("ENC9.0 FAIL")
 
@@ -106,7 +108,7 @@ if __name__ == '__main__':
         start = time.time()
         enc9_3_e = enc9_3.encrypt_key(text, "random_key", "salt")
         if enc9_3.decrypt_key(enc9_3_e, "random_key", "salt") == text:
-            print("ENC9.3", time.time()-start)
+            print("ENC9.3", time.time()-start, len(enc9_3_e), sys.getsizeof(enc9_3_e))
         else:
             print("ENC9.3 FAIL")
 
@@ -114,15 +116,17 @@ if __name__ == '__main__':
         start = time.time()
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
         if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
-            print("ENC9.x", time.time()-start)
+            print("ENC9.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
+            with open("output.txt", "wb") as f:
+                f.write(enc10_x_e)
         else:
             print("ENC9.x FAIL")
 
     seed = enc10_x.pass_to_seed("key", "salt")
     input("Inp")
     while True:
-        #enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
-        enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
+        enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
+        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
         input("Loop.")
