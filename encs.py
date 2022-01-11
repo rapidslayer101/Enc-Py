@@ -18,11 +18,11 @@ if __name__ == '__main__':
     enc5_t = False
     enc6_t = False
     enc7_t = False
-    enc8_t = False
-    enc8_2_t = False
-    enc8_5_t = False
-    enc8_6_t = False
-    enc9_0_t = False
+    enc8_t = True
+    enc8_2_t = True
+    enc8_5_t = True
+    enc8_6_t = True
+    enc9_0_t = True
     enc9_3_t = True
     enc10_x_t = True
 
@@ -122,24 +122,30 @@ if __name__ == '__main__':
         else:
             print("ENC9.x FAIL")
 
-    seed = enc10_x.pass_to_seed("key", "salt")
-    input("Inp")
-    while True:
-        enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
-        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
-        input()
-        enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
-        input("Loop.")
+    #enc10_x_e = enc10_x.encrypt_key(input(), "random_key", "salt")
+    #print(enc10_x_e)
+    #print(enc10_x.decrypt_key(enc10_x_e, "random_key", "salt"))
 
-    #import time
-    #loop = 0
-    #start_time = time.time()
+
+    #seed = enc10_x.pass_to_seed("key", "salt")
+    input("Inp")
     #while True:
-    #    loop += 1
-    #    random_stuff = enc10_x.hex_gens(1000)
-    #    encrypted = enc10_x.encrypt(random_stuff, "key-", "salt")
-    #    print(loop*1000, time.time()-start_time)
-    #    if not random_stuff == enc9.decrypt(encrypted, "key-", "salt"):
-    #        print("fail")
-    #       input()
+    #    enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
+    #    #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
+    #    input()
+    #    enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
+    #    input("Loop.")
+
+    import time
+    loop = 0
+    start_time = time.time()
+    while True:
+        loop += 1
+        random_stuff = enc10_x.hex_gens(1000000)
+        encrypted = enc10_x.encrypt_key(random_stuff, "random_key", "salt")
+        if loop % 1 == 0:
+            print(loop*1000, time.time() - start_time)
+        if not random_stuff == enc10_x.decrypt_key(encrypted, "random_key", "salt"):
+            print("fail")
+            input()
 

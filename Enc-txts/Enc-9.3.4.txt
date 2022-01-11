@@ -1,14 +1,15 @@
 import datetime, re
+import sys
 from time import time
 from os import path
 from random import choice
-from base64 import b85encode, b64encode, b64decode
+from base64 import b85encode, b85decode, b64encode, b64decode
 from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
-from binascii import a2b_base64, b2a_base64
 
-# enc 9.4.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.3.4 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+#ascii_set = """0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"""  # base85
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 block_size = 2000000  # todo smart block size allocation
 
@@ -67,7 +68,7 @@ def pass_to_seed(password, salt):
     return to_hex(16, 96, sha512(sha512(b85encode(inp.encode())).hexdigest().encode()).hexdigest())
 
 
-def seed_to_alpha(seed):  # this function requires 171 numbers # todo re-evaluate
+def seed_to_alpha(seed):  # this function requires 171 numbers
     alpha_gen = ascii_set
     counter = 0
     alpha = ""
@@ -90,33 +91,31 @@ def seed_to_data(seed):
     return seed_to_alpha(int(to_hex(96, 16, seed), 36)), to_hex(10, 96, str(int(to_hex(96, 16, seed), 36)))
 
 
-def b64echeck(master_key):
-    while len(master_key) % 4 != 0:
-        master_key += "="
-    return master_key
-
-
 def shifter(plaintext, shift_num, alphabet, forwards):
+    import binascii
     alphabet2 = alphabet*3
     output_enc = ""
     counter = 0
     if forwards:
-        for char in plaintext:
-            counter += 2
-            output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
-        output_enc += "zzzzzzzz"
-
-        # test part
-        #output_enc_1 = a2b_base64(b64echeck(output_enc))
-        #output_enc_2 = b64echeck(b2a_base64(output_enc_1).decode("utf-8").replace("zzzzzzzw", "z"*8).replace("\n", ""))
-        #if b64echeck(output_enc) != output_enc_2:
-        #    print(b64echeck(output_enc), "\n", output_enc_2)
-
-        return a2b_base64(b64echeck(output_enc))
+        try:
+            for char in plaintext:
+                counter += 2
+                output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
+        except:
+            print(counter, char)
+        #print(len(output_enc))
+        #print(output_enc)
+        output_enc = binascii.a2b_base64(output_enc)
+        #print(len(output_enc))
+        #print(output_enc)
+       # print(binascii.b2a_base64(output_enc))
     else:
-        for char in plaintext.replace("=", ""):
-            counter += 2
-            output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
+        try:
+            for char in plaintext:
+                counter += 2
+                output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
+        except:
+            print(counter, char)
     return output_enc
 
 
@@ -136,14 +135,13 @@ def encrypt_block(enc, data, block_num, alpha, shift_num, send_end=None):
     print(f"Block {block_num} launched")
     if enc.lower() in ["e", "en", "enc", "encrypt"]:
         if type(data) == bytes:
-            block = shifter(b64encode(compress(data, 9)).decode('utf-8').replace("=", ""), str(shift_num), alpha, True)
+            block = shifter(b85encode(compress(data, 9)).decode('utf-8'), str(shift_num), alpha, True)
         else:
-            block = shifter(b64encode(compress(data.encode('utf-8'), 9)).decode('utf-8').replace("=", "")
+            block = shifter(b85encode(compress(data.encode('utf-8'), 9))
                             .decode('utf-8'), str(shift_num), alpha, True)
     else:
         output_end = shifter(data, str(shift_num), alpha, False).replace(" ", "")
-        block = decompress(b64decode(b64echeck(output_end)))
-        #decompress(b64decode(b64echeck(output_end))).decode('utf-8')
+        block = decompress(b85decode(output_end))
         try:
             block = block.decode('utf-8')
         except UnicodeDecodeError:
@@ -161,8 +159,8 @@ def encrypt(enc, text, alpha, shift_num):
         if enc.lower() in ["e", "en", "enc", "encrypt"]:
             e_chunks = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         else:
-            text = b64echeck(b2a_base64(text).decode("utf-8"))
-            text = text[:-16]+text[-16:].replace("zzzzzzzw", "z"*8).replace("\n", "")
+            import binascii
+            text = binascii.b2a_base64(text).decode("utf-8")
             if type(text) == list:
                 e_chunks = text
             else:
@@ -181,7 +179,7 @@ def encrypt(enc, text, alpha, shift_num):
                     shift_num += f"{int(str(shift_num)[-2048:], 36)}"
                 output_end = shifter(text, str(shift_num), alpha, False).replace(" ", "")
                 try:
-                    output_end = decompress(b64decode(b64echeck(output_end))).decode('utf-8')
+                    output_end = decompress(b64decode(output_end)).decode('utf-8')
                 except UnicodeDecodeError:
                     output_end = decompress(b64decode(output_end))
                 return output_end

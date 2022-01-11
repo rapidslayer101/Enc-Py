@@ -1,7 +1,19 @@
 import enclib as enc
 from zlib import compress, decompress
-from base64 import b85encode, b85decode, b64encode
+from base64 import b85encode, b85decode, b64encode, b64decode
 import sys, binascii
+
+
+def b64echeck(master_key):
+    while True:
+        if len(master_key) % 4 == 0:
+            break
+        else:
+            master_key += "="
+    return master_key
+
+
+#print(output_end)
 
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
