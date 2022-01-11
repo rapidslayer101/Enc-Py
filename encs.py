@@ -18,12 +18,12 @@ if __name__ == '__main__':
     enc5_t = False
     enc6_t = False
     enc7_t = False
-    enc8_t = True
-    enc8_2_t = True
-    enc8_5_t = True
-    enc8_6_t = True
-    enc9_0_t = True
-    enc9_3_t = True
+    enc8_t = False
+    enc8_2_t = False
+    enc8_5_t = False
+    enc8_6_t = False
+    enc9_0_t = False
+    enc9_3_t = False
     enc10_x_t = True
 
     if enc2_t:
@@ -117,8 +117,8 @@ if __name__ == '__main__':
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
         if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
             print("ENC9.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
-            with open("output.txt", "wb") as f:
-                f.write(enc10_x_e)
+            #with open("output.txt", "wb") as f:
+            #    f.write(enc10_x_e)
         else:
             print("ENC9.x FAIL")
 
@@ -127,25 +127,26 @@ if __name__ == '__main__':
     #print(enc10_x.decrypt_key(enc10_x_e, "random_key", "salt"))
 
 
-    #seed = enc10_x.pass_to_seed("key", "salt")
-    input("Inp")
-    #while True:
-    #    enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
-    #    #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
-    #    input()
-    #    enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
-    #    input("Loop.")
-
-    import time
-    loop = 0
-    start_time = time.time()
+    seed = enc10_x.pass_to_seed("key", "salt")
+    #input("Inp")
+    input()
     while True:
-        loop += 1
-        random_stuff = enc10_x.hex_gens(1000000)
-        encrypted = enc10_x.encrypt_key(random_stuff, "random_key", "salt")
-        if loop % 1 == 0:
-            print(loop*1000, time.time() - start_time)
-        if not random_stuff == enc10_x.decrypt_key(encrypted, "random_key", "salt"):
-            print("fail")
-            input()
+        enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
+        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
+        input()
+        enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
+        input("Loop.")
+
+    #import time
+    #loop = 0
+    #start_time = time.time()
+    #while True:
+    #    loop += 1
+    #    random_stuff = enc10_x.hex_gens(1000000)
+    #    encrypted = enc10_x.encrypt_key(random_stuff, "random_key", "salt")
+    #    if loop % 1 == 0:
+    #        print(loop*1000, time.time() - start_time)
+    #    if not random_stuff == enc10_x.decrypt_key(encrypted, "random_key", "salt"):
+    #        print("fail")
+    #        input()
 
