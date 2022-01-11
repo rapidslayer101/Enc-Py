@@ -1,6 +1,4 @@
-import codecs
-import sys
-import time
+import sys, time
 from multiprocessing import freeze_support
 import enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enclib as enc10_x
@@ -17,7 +15,7 @@ if __name__ == '__main__':
     enc4_t = False
     enc5_t = False
     enc6_t = False
-    enc7_t = False
+    enc7_t = True
     enc8_t = False
     enc8_2_t = False
     enc8_5_t = False
@@ -126,14 +124,11 @@ if __name__ == '__main__':
     #print(enc10_x_e)
     #print(enc10_x.decrypt_key(enc10_x_e, "random_key", "salt"))
 
-
     seed = enc10_x.pass_to_seed("key", "salt")
-    #input("Inp")
-    input()
+    input("Inp")
     while True:
         enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
         #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
-        input()
         enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
         input("Loop.")
 
