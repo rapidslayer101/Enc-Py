@@ -1,13 +1,13 @@
 import sys, time
 from multiprocessing import freeze_support
-import enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enclib as enc10_x
 
 if __name__ == '__main__':
     freeze_support()
     text = enc10_x.hex_gens(1000000)
     #text = enc9_x.hex_gens(100)
-    #text = text*10
+    text = text*10
     print(f"TEXT {len(text)}")
 
     enc2_t = False
@@ -15,13 +15,14 @@ if __name__ == '__main__':
     enc4_t = False
     enc5_t = False
     enc6_t = False
-    enc7_t = True
+    enc7_t = False
     enc8_t = False
     enc8_2_t = False
     enc8_5_t = False
     enc8_6_t = False
     enc9_0_t = False
     enc9_3_t = False
+    enc9_4_t = False
     enc10_x_t = True
 
     if enc2_t:
@@ -110,13 +111,25 @@ if __name__ == '__main__':
         else:
             print("ENC9.3 FAIL")
 
+    if enc9_4_t:
+        start = time.time()
+        enc9_4_e = enc9_4.encrypt_key(text, "random_key", "salt")
+        if enc9_4.decrypt_key(enc9_4_e, "random_key", "salt") == text:
+            print("ENC9.4", time.time()-start, len(enc9_4_e), sys.getsizeof(enc9_4_e))
+        else:
+            print("ENC9.4 FAIL")
+
     if enc10_x_t:
         start = time.time()
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
         if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
             print("ENC9.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
             #with open("output.txt", "wb") as f:
-            #    f.write(enc10_x_e)
+            #    if type(enc10_x_e) == list:
+            #        for block in enc10_x_e:
+            #            f.write(block)
+            #    else:
+            #        f.write(enc10_x_e)
         else:
             print("ENC9.x FAIL")
 
@@ -124,12 +137,11 @@ if __name__ == '__main__':
     #print(enc10_x_e)
     #print(enc10_x.decrypt_key(enc10_x_e, "random_key", "salt"))
 
-    seed = enc10_x.pass_to_seed("key", "salt")
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "Beacon.jar", seed, "enc.renc")
-        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", seed, "enc.renc")
-        enc10_x.encrypt_file("dec", "enc.renc", seed, "test")
+        #enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
         input("Loop.")
 
     #import time

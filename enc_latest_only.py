@@ -4,8 +4,7 @@ from multiprocessing import freeze_support
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc9.hex_gens(input("Input number of chars (suggested 100000) to test device encryption speeds\n"
-                               "Number: "))
+    text = enc9.hex_gens(100000)
     print(f"TEXT {len(text)}")
 
     start = time.time()
