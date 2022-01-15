@@ -8,9 +8,9 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 9.7.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.6.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
-block_size = 1000000
+block_size = 1000000  # todo smart block size allocation
 
 
 def hex_gens(num):
@@ -94,14 +94,16 @@ def b64pad(master_key):
     return master_key
 
 
-def shifter(plaintext, shift_num, alpha, forwards):
-    alphax3 = alpha*3
+def shifter(plaintext, shift_num, alphabet, forwards):
+    alphax3 = alphabet*3
     pln_txt = plaintext.replace("=", "")
+    shift_num2 = [int(shift_num[i:i + 2]) for i in range(0, len(shift_num), 2)]
     if forwards:
-        output_enc = "".join([alphax3[alpha.index(pln_txt[x])+alpha.index(shift_num[x])] for x in range(len(pln_txt))])
+        output_enc = "".join([alphax3[alphabet.index(pln_txt[i])+shift_num2[i]] for i in range(len(pln_txt))])
         return a2b_base64(b64pad(output_enc+"zzzzzzzz"))
     else:
-        return "".join([alphax3[alpha.index(pln_txt[x])-alpha.index(shift_num[x])] for x in range(len(pln_txt))])
+        output_enc = "".join([alphax3[alphabet.index(pln_txt[i])-shift_num2[i]] for i in range(len(pln_txt))])
+    return output_enc
 
 
 def get_file_size(file):
@@ -117,11 +119,9 @@ def get_file_size(file):
 
 
 def shift_gen(amount, shift_num):
-    shift_value = ""
-    while len(str(shift_value)) < amount:
-        shift_num = b64enc(sha512(shift_num.encode("utf-8")).digest()).decode("utf-8")[:-2]
-        shift_value += shift_num
-    return shift_value
+    while len(str(shift_num)) < amount << 1:
+        shift_num += f"{int(shift_num[-1024:][:512], 24)}{int(shift_num[-512:], 24)}"
+    return shift_num
 
 
 def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
@@ -157,9 +157,9 @@ def encrypt(enc, text, alpha, shift_num, salt, join_dec=None):
             else:
                 text = block_process(text)
                 if type(text) == bytes:
-                    e_chunks = text.split(b"\\000\\")
+                    e_chunks = text.split(b"\\BLOCK\\")
                 if type(text) == str:
-                    e_chunks = text.split("\\000\\")
+                    e_chunks = text.split("\\BLOCK\\")
 
         if len(e_chunks) == 1:
             shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
@@ -219,13 +219,13 @@ def encrypt_file(enc, file, key, salt, file_output):
                 result_list = encrypt(enc, data_chunks, alpha, shift_num, salt)
                 with open(file_output, "wb") as f:
                     for e_block in result_list:
-                        f.write(b"\\000\\")
+                        f.write(b"\\BLOCK\\")
                         f.write(e_block)
                 print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(result_list)})"
                       f" IN {round(time()-start, 2)}s")  # todo show new "compressed" size
             else:
                 with open(file, "rb") as hash_file:
-                    e_text = hash_file.read().split(b"\\000\\")
+                    e_text = hash_file.read().split(b"\\BLOCK\\")
                 d_data = encrypt(enc, e_text[1:], alpha, shift_num, salt)
                 if type(d_data[0]) == bytes:
                     with open(f"{file_output}", "wb") as f:
@@ -238,7 +238,7 @@ def encrypt_file(enc, file, key, salt, file_output):
                 print(f"DECRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(e_text)-1})"
                       f" IN {round(time()-start, 2)}s")  # todo show new "compressed" size
         else:
-            return "File not found"
+            return "File not found"  # todo smart find alternative
     else:
         print("ENCRYPTION CANCELLED! Enc type not in 'e', 'en', 'enc', 'encrypt', 'd', 'de', 'dec', 'decrypt'")
 

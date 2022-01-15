@@ -1,6 +1,6 @@
 import sys, time
 from multiprocessing import freeze_support
-import enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enclib as enc10_x
 
 if __name__ == '__main__':
@@ -23,7 +23,8 @@ if __name__ == '__main__':
     enc9_0_t = False
     enc9_3_t = False
     enc9_4_t = False
-    enc9_5_t = True
+    enc9_5_t = False
+    enc9_6_t = True
     enc10_x_t = True
 
     if enc2_t:
@@ -128,17 +129,31 @@ if __name__ == '__main__':
         else:
             print("ENC9.5 FAIL")
 
+    if enc9_6_t:
+        start = time.time()
+        enc9_6_e = enc9_6.encrypt_key(text, "random_key", "salt")
+        if enc9_6.decrypt_key(enc9_6_e, "random_key", "salt") == text:
+            print("ENC9.6", time.time()-start, len(enc9_6_e), sys.getsizeof(enc9_6_e))
+            with open("output96.txt", "wb") as f:
+                if type(enc9_6_e) == list:
+                    for block in enc9_6_e:
+                        f.write(block)
+                else:
+                    f.write(enc9_6_e)
+        else:
+            print("ENC9.6 FAIL")
+
     if enc10_x_t:
         start = time.time()
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
         if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
             print("ENC9.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
-            #with open("output.txt", "wb") as f:
-            #    if type(enc10_x_e) == list:
-            #        for block in enc10_x_e:
-            #            f.write(block)
-            #    else:
-            #        f.write(enc10_x_e)
+            with open("output97.txt", "wb") as f:
+                if type(enc10_x_e) == list:
+                    for block in enc10_x_e:
+                        f.write(block)
+                else:
+                    f.write(enc10_x_e)
         else:
             print("ENC9.x FAIL")
 
@@ -148,8 +163,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
-        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
+        #enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
         input("Loop.")
