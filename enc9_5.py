@@ -2,13 +2,13 @@ import datetime, re
 from time import time
 from os import path
 from random import choice
-from base64 import b85encode, b64encode as b64enc, b64decode as b64dec
+from base64 import b85encode, b64encode, b64decode
 from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 9.5.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.5.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
 block_size = 2000000  # todo smart block size allocation
 
@@ -89,7 +89,7 @@ def seed_to_data(seed):
     return seed_to_alpha(int(to_hex(96, 16, seed), 36)), to_hex(10, 96, str(int(to_hex(96, 16, seed), 36)))
 
 
-def b64pad(master_key):
+def b64echeck(master_key):
     while len(master_key) % 4 != 0:
         master_key += "="
     return master_key
@@ -100,11 +100,11 @@ def shifter(plaintext, shift_num, alphabet, forwards):
     output_enc = ""
     counter = 0
     if forwards:
-        for char in plaintext.replace("=", ""):
+        for char in plaintext:
             counter += 2
             output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
         output_enc += "zzzzzzzz"
-        return a2b_base64(b64pad(output_enc))
+        return a2b_base64(b64echeck(output_enc))
     else:
         for char in plaintext.replace("=", ""):
             counter += 2
@@ -124,21 +124,19 @@ def get_file_size(file):
         return f"{round(file_size_kb,2)}KB"
 
 
-def shift_gen(amount, shift_num):
-    while len(str(shift_num)) < amount << 1:
-        shift_num += f"{int(shift_num[-1024:][:512], 24)}{int(shift_num[-512:], 24)}"
-    return shift_num
-
-
 def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
     print(f"Block {block_num} launched")
-    shift_num = shift_gen(int(block_size*1.5), str(int(to_hex(96, 10, str(block_seed)), 36)))
+    shift_num = str(int(to_hex(96, 10, str(block_seed)), 36))
+    while len(str(shift_num)) < block_size*3:
+        shift_num += f"{int(str(shift_num)[-512:], 24)}"
     if enc.lower() in ["e", "en", "enc", "encrypt"]:
-        if type(data) != bytes:
-            data = data.encode('utf-8')
-        block = shifter(b64enc(compress(data, 9)).decode('utf-8'), shift_num, alpha, True)
+        if type(data) == bytes:
+            block = shifter(b64encode(compress(data, 9)).decode('utf-8').replace("=", ""), str(shift_num), alpha, True)
+        else:
+            block = shifter(b64encode(compress(data.encode('utf-8'), 9)).decode('utf-8').replace("=", ""),
+                            str(shift_num), alpha, True)
     else:
-        block = decompress(b64dec(b64pad(shifter(data, shift_num, alpha, False))))
+        block = decompress(b64decode(b64echeck(shifter(data, str(shift_num), alpha, False))))
         try:
             block = block.decode('utf-8')
         except UnicodeDecodeError:
@@ -150,20 +148,20 @@ def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
         return block
 
 
-def block_process(blk):
-    blk = b64pad(b2a_base64(blk).decode("utf-8"))
-    return blk[:-12]+blk[-12:].replace("zzzzzzzw", "z"*8).replace("\n", "")#.replace("=", "")
-
-
 def encrypt(enc, text, alpha, shift_num, salt, join_dec=None):
     if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
         if enc.lower() in ["e", "en", "enc", "encrypt"]:
             e_chunks = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         else:
             if type(text) == list:
-                e_chunks = [block_process(block) for block in text]
+                e_chunks = []
+                for block in text:
+                    block = b64echeck(b2a_base64(block).decode("utf-8"))
+                    block = block[:-12]+block[-12:].replace("zzzzzzzw", "z"*8).replace("\n", "").replace("=", "")
+                    e_chunks.append(block)
             else:
-                text = block_process(text)
+                text = b64echeck(b2a_base64(text).decode("utf-8"))
+                text = text[:-16]+text[-16:].replace("zzzzzzzw", "z"*8).replace("\n", "")
                 if type(text) == bytes:
                     e_chunks = text.split(b"\\BLOCK\\")
                 if type(text) == str:
@@ -172,22 +170,30 @@ def encrypt(enc, text, alpha, shift_num, salt, join_dec=None):
         if len(e_chunks) == 1:
             shift_num = str(int(to_hex(96, 10, str(shift_num)), 36))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
-                if type(text) != bytes:
-                    text = text.encode('utf-8')
-                plaintext = b64enc(compress(text, 9)).decode('utf-8')
-                return shifter(plaintext, shift_gen(len(plaintext), shift_num), alpha, True)
+                if type(text) == bytes:
+                    plaintext = b64encode(compress(text, 9)).decode('utf-8').replace("=", "")
+                else:
+                    plaintext = b64encode(compress(text.encode('utf-8'), 9)).decode('utf-8').replace("=", "")
+                while len(str(shift_num)) < len(plaintext) << 1:
+                    shift_num += f"{int(str(shift_num)[-512:], 24)}"
+                return shifter(plaintext, str(shift_num), alpha, True)
             else:
-                output_end = decompress(b64dec(b64pad(shifter(text, shift_gen(len(text), shift_num), alpha, False))))
+                while len(str(shift_num)) < len(text) << 1:
+                    shift_num += f"{int(str(shift_num)[-512:], 24)}"
+                output_end = shifter(text, str(shift_num), alpha, False)
+                output_end = decompress(b64decode(b64echeck(output_end)))
                 try:
-                    return output_end.decode('utf-8')
+                    output_end = output_end.decode('utf-8')
                 except UnicodeDecodeError:
-                    return output_end
+                    pass
+                return output_end
         else:
             print(f"Launching {len(e_chunks)} threads")
             block_seeds = []
             for i in range(len(e_chunks)+1):
-                shift_num = pass_to_seed(shift_num, salt)
-                block_seeds.append(shift_num)
+                block_seed = pass_to_seed(shift_num, salt)
+                block_seeds.append(block_seed)
+                shift_num = block_seed
             pool = Pool(cpu_count())
             result_objects = [pool.apply_async(encrypt_block, args=(enc, e_chunks[x-1], x, alpha, block_seeds[x-1]))
                               for x in range(1, len(e_chunks)+1)]

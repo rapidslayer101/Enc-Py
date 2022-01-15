@@ -1,6 +1,6 @@
 import sys, time
 from multiprocessing import freeze_support
-import enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enclib as enc10_x
 
 if __name__ == '__main__':
@@ -23,6 +23,7 @@ if __name__ == '__main__':
     enc9_0_t = False
     enc9_3_t = False
     enc9_4_t = False
+    enc9_5_t = True
     enc10_x_t = True
 
     if enc2_t:
@@ -118,6 +119,14 @@ if __name__ == '__main__':
             print("ENC9.4", time.time()-start, len(enc9_4_e), sys.getsizeof(enc9_4_e))
         else:
             print("ENC9.4 FAIL")
+
+    if enc9_5_t:
+        start = time.time()
+        enc9_5_e = enc9_5.encrypt_key(text, "random_key", "salt")
+        if enc9_5.decrypt_key(enc9_5_e, "random_key", "salt") == text:
+            print("ENC9.5", time.time()-start, len(enc9_5_e), sys.getsizeof(enc9_5_e))
+        else:
+            print("ENC9.5 FAIL")
 
     if enc10_x_t:
         start = time.time()
