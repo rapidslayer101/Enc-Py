@@ -8,9 +8,9 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 9.6.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.5.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
-block_size = 1000000  # todo smart block size allocation
+block_size = 2000000  # todo smart block size allocation
 
 
 def hex_gens(num):
@@ -68,7 +68,8 @@ def pass_to_seed(password, salt):
 
 def seed_to_alpha(seed):  # this function requires 129 numbers
     alpha_gen = ascii_set
-    counter, alpha = [0, ""]
+    counter = 0
+    alpha = ""
     while len(alpha_gen) > 0:
         counter += 2
         value = int(str(seed)[counter:counter+2]) << 1
@@ -95,14 +96,19 @@ def b64pad(master_key):
 
 
 def shifter(plaintext, shift_num, alphabet, forwards):
-    alphax3 = alphabet*3
-    pln_txt = plaintext.replace("=", "")
-    shift_num2 = [int(shift_num[i:i + 2]) for i in range(0, len(shift_num), 2)]
+    alphabet2 = alphabet*3
+    output_enc = ""
+    counter = 0
     if forwards:
-        output_enc = "".join([alphax3[alphabet.index(pln_txt[i])+shift_num2[i]] for i in range(len(pln_txt))])
-        return a2b_base64(b64pad(output_enc+"zzzzzzzz"))
+        for char in plaintext.replace("=", ""):
+            counter += 2
+            output_enc += alphabet2[alphabet.index(char)+int(shift_num[counter:counter+2])]
+        output_enc += "zzzzzzzz"
+        return a2b_base64(b64pad(output_enc))
     else:
-        output_enc = "".join([alphax3[alphabet.index(pln_txt[i])-shift_num2[i]] for i in range(len(pln_txt))])
+        for char in plaintext.replace("=", ""):
+            counter += 2
+            output_enc += alphabet2[alphabet.index(char)-int(shift_num[counter:counter+2])]
     return output_enc
 
 
@@ -125,6 +131,7 @@ def shift_gen(amount, shift_num):
 
 
 def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
+    print(f"Block {block_num} launched")
     shift_num = shift_gen(int(block_size*1.5), str(int(to_hex(96, 10, str(block_seed)), 36)))
     if enc.lower() in ["e", "en", "enc", "encrypt"]:
         if type(data) != bytes:
@@ -136,6 +143,7 @@ def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
             block = block.decode('utf-8')
         except UnicodeDecodeError:
             pass
+    print(f"Block {block_num} complete")
     if send_end:
         send_end.send(block)
     else:
@@ -210,8 +218,8 @@ def encrypt_file(enc, file, key, salt, file_output):
     start = time()
     if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
         if path.exists(file):
-            file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
-            print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/16200410.1868, 2)}s")
+            file_name, file_type = file.split("/")[-1].split(".")
+            print(f"{file_name} is {get_file_size(file)}")
             alpha, shift_num = seed_to_data(pass_to_seed(key, salt))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 with open(file, 'rb') as hash_file:
