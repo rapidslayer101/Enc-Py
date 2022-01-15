@@ -8,7 +8,7 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 9.7.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.7.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
 block_size = 1000000
 
@@ -95,13 +95,13 @@ def b64pad(master_key):
 
 
 def shifter(plaintext, shift_num, alpha, forwards):
-    alphax3 = alpha*2
+    alphax3 = alpha*3
     pln_txt = plaintext.replace("=", "")
     if forwards:
-        output_enc = "".join([alphax3[alpha.index(x)+alpha.index(y)] for x, y in zip(pln_txt, shift_num)])
+        output_enc = "".join([alphax3[alpha.index(pln_txt[x])+alpha.index(shift_num[x])] for x in range(len(pln_txt))])
         return a2b_base64(b64pad(output_enc+"zzzzzzzz"))
     else:
-        return "".join([alphax3[alpha.index(x)-alpha.index(y)] for x, y in zip(pln_txt, shift_num)])
+        return "".join([alphax3[alpha.index(pln_txt[x])-alpha.index(shift_num[x])] for x in range(len(pln_txt))])
 
 
 def get_file_size(file):
@@ -118,10 +118,9 @@ def get_file_size(file):
 
 def shift_gen(amount, shift_num):
     shift_value = ""
-    while len(shift_value) < amount:
-        shift_num1 = sha512(shift_num.encode("utf-8")).digest()
-        shift_num = b64enc(shift_num1).decode("utf-8")[:-2]
-        shift_value += shift_num+b64enc(shift_num1[::-1]).decode("utf-8")[:-2]
+    while len(str(shift_value)) < amount:
+        shift_num = b64enc(sha512(shift_num.encode("utf-8")).digest()).decode("utf-8")[:-2]
+        shift_value += shift_num
     return shift_value
 
 
@@ -145,7 +144,7 @@ def encrypt_block(enc, data, block_num, alpha, block_seed, send_end=None):
 
 def block_process(blk):
     blk = b64pad(b2a_base64(blk).decode("utf-8"))
-    return blk[:-12]+blk[-12:].replace("zzzzzzzw", "z"*8).replace("\n", "")
+    return blk[:-12]+blk[-12:].replace("zzzzzzzw", "z"*8).replace("\n", "")#.replace("=", "")
 
 
 def encrypt(enc, text, alpha, shift_num, salt, join_dec=None):
@@ -212,7 +211,7 @@ def encrypt_file(enc, file, key, salt, file_output):
     if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
         if path.exists(file):
             file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
-            print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/25044728.6089, 2)}s")
+            print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/16200410.1868, 2)}s")
             alpha, shift_num = seed_to_data(pass_to_seed(key, salt))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 with open(file, 'rb') as hash_file:
