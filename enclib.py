@@ -8,7 +8,7 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 9.7.3 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 9.8.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
 block_size = 1000000
 
@@ -104,12 +104,12 @@ def shift_gen(amount, shift_num):
 
 
 def shifter(plaintext, shift_num, al, forwards):
-    alx3 = al*2
+    alx3 = [x for x in al*3]
     pln_txt = plaintext.replace("=", "")
     if forwards:
-        return a2b_base64(b64pad("".join([alx3[al.index(x)+al.index(y)] for x, y in zip(pln_txt, shift_num)])+"z"*8))
+        return a2b_base64(b64pad("".join([alx3[al.index(x)+ord(y)] for x, y in zip(pln_txt, shift_num)])+"z"*8))
     else:
-        return decompress(b64dec(b64pad("".join([alx3[al.index(x)-al.index(y)] for x, y in zip(pln_txt, shift_num)]))))
+        return decompress(b64dec(b64pad("".join([alx3[al.index(x)-ord(y)] for x, y in zip(pln_txt, shift_num)]))))
 
 
 def get_file_size(file):
@@ -211,7 +211,7 @@ def encrypt_file(enc, file, key, salt, file_output):
     if enc.lower() in ["e", "en", "enc", "encrypt", "d", "de", "dec", "decrypt"]:
         if path.exists(file):
             file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
-            print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/25044728.6089, 2)}s")
+            print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/32345903.7288, 2)}s")
             alpha, shift_num = seed_to_data(pass_to_seed(key, salt))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 with open(file, 'rb') as hash_file:
@@ -222,7 +222,7 @@ def encrypt_file(enc, file, key, salt, file_output):
                         f.write(b"\\000\\")
                         f.write(e_block)
                 print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(result_list)})"
-                      f" IN {round(time()-start, 2)}s")  # todo show new "compressed" size
+                      f" IN {round(time()-start, 2)}s")
             else:
                 with open(file, "rb") as hash_file:
                     e_text = hash_file.read().split(b"\\000\\")
@@ -236,7 +236,7 @@ def encrypt_file(enc, file, key, salt, file_output):
                         for block in d_data:
                             f.write(block.replace("\r", ""))
                 print(f"DECRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(e_text)-1})"
-                      f" IN {round(time()-start, 2)}s")  # todo show new "compressed" size
+                      f" IN {round(time()-start, 2)}s")
         else:
             return "File not found"
     else:
