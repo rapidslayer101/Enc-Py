@@ -7,7 +7,7 @@ if __name__ == '__main__':
     freeze_support()
     text = enc10_x.hex_gens(1000000)
     #text = enc9_x.hex_gens(100)
-    #text = text*10
+    #text = text*20
     print(f"TEXT {len(text)}")
 
     enc2_t = False
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     enc9_3_t = False
     enc9_4_t = False
     enc9_5_t = False
-    enc9_6_t = True
+    enc9_6_t = False
     enc9_7_t = True
     enc10_x_t = True
 
@@ -166,8 +166,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
-        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
+        #enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
         #enc10_x.encrypt_file("enc", "Monopoly.Plus.zip", "key", "salt", "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
