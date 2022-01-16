@@ -8,16 +8,30 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 10.0.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
-block_size = 1000000  # modifies the chunking size
-b64set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-b96set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
-conv_dict = {v: k for v, k in zip(range(96), b96set)}
-conv_dict_back = {v: k for k, v in conv_dict.items()}
+# enc 9.8.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"  # base64
+block_size = 1000000
 
 
 def hex_gens(num):
-    return "".join([choice(b96set) for x in range(int(num))])
+    hex_gens_ = ""
+    while len(hex_gens_) != int(num):
+        hex_gens_ += choice(ascii_set)
+    return hex_gens_
+
+
+conv_dict = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: 'a',
+             11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f', 16: "g", 17: "h", 18: "i", 19: "j", 20: "k",
+             21: "l", 22: "m", 23: "n", 24: "o", 25: "p", 26: "q", 27: "r", 28: "s", 29: "t", 30: "u",
+             31: "v", 32: "w", 33: "x", 34: "y", 35: "z", 36: "A", 37: 'B', 38: 'C', 39: 'D', 40: 'E',
+             41: 'F', 42: "G", 43: "H", 44: "I", 45: "J", 46: "K", 47: "L", 48: "M", 49: "N", 50: "O",
+             51: "P", 52: "Q", 53: "R", 54: "S", 55: "T", 56: "U", 57: "V", 58: "W", 59: "X", 60: "Y",
+             61: "Z", 62: "¬", 63: "`", 64: "!", 65: "\"", 66: "£", 67: "$", 68: "%", 69: "^", 70: "&",
+             71: "*", 72: "(", 73: ")", 74: "-", 75: " ", 76: "=", 77: "+", 78: "[", 79: "{", 80: "]",
+             81: "}", 82: ";", 83: ":", 84: "'", 85: "@", 86: "#", 87: "~", 88: "\\", 89: "|", 90: ",",
+             91: "<", 92: ".", 93: ">", 94: "/", 95: "?"}
+
+conv_dict_back = {v: k for k, v in conv_dict.items()}
 
 
 def to_hex(base_fr, base_to, hex_to_convert):
@@ -34,7 +48,10 @@ def to_hex(base_fr, base_to, hex_to_convert):
 
 
 def to_number(hex_to_convert):
-    return "".join([str(conv_dict_back[x]) for x in hex_to_convert])
+    decimal = ""
+    for digit in hex_to_convert:
+        decimal += str(conv_dict_back[digit])
+    return decimal
 
 
 def get_hex_base(hex_to_check):  # this is only a guess
@@ -50,7 +67,7 @@ def pass_to_seed(password, salt):
 
 
 def seed_to_alpha(seed):  # this function requires 129 numbers
-    alpha_gen = b64set
+    alpha_gen = ascii_set
     counter, alpha = [0, ""]
     while len(alpha_gen) > 0:
         counter += 2
@@ -148,7 +165,7 @@ def encrypt(enc, text, alpha, shift_seed, salt, join_dec=None):
             shift_seed = str(int(to_hex(96, 10, str(shift_seed)), 36))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 if type(text) != bytes:
-                    text = text.encode()
+                    text = text.encode('utf-8')
                 plaintext = b64enc(compress(text, 9)).decode()
                 return shifter(plaintext, shift_gen(len(plaintext), shift_seed), alpha, True)
             else:
@@ -198,15 +215,18 @@ def encrypt_file(enc, file, key, salt, file_output):
             alpha, shift_num = seed_to_data(pass_to_seed(key, salt))
             if enc.lower() in ["e", "en", "enc", "encrypt"]:
                 with open(file, 'rb') as hash_file:
-                    result_list = encrypt(enc, hash_file.read(), alpha, shift_num, salt)
+                    data_chunks = hash_file.read()
+                result_list = encrypt(enc, data_chunks, alpha, shift_num, salt)
                 with open(file_output, "wb") as f:
                     for e_block in result_list:
                         f.write(b"\\000\\")
                         f.write(e_block)
-                print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
+                print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(result_list)})"
+                      f" IN {round(time()-start, 2)}s")
             else:
                 with open(file, "rb") as hash_file:
-                    d_data = encrypt(enc, hash_file.read().split(b"\\000\\")[1:], alpha, shift_num, salt)
+                    e_text = hash_file.read().split(b"\\000\\")
+                d_data = encrypt(enc, e_text[1:], alpha, shift_num, salt)
                 if type(d_data[0]) == bytes:
                     with open(f"{file_output}", "wb") as f:
                         for block in d_data:
@@ -215,7 +235,8 @@ def encrypt_file(enc, file, key, salt, file_output):
                     with open(f"{file_output}", "w", encoding="utf-8") as f:
                         for block in d_data:
                             f.write(block.replace("\r", ""))
-                print(f"DECRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
+                print(f"DECRYPTION COMPLETE OF {get_file_size(file)} ({block_size}*{len(e_text)-1})"
+                      f" IN {round(time()-start, 2)}s")
         else:
             return "File not found"
     else:

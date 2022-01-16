@@ -1,6 +1,6 @@
 import sys, time
 from multiprocessing import freeze_support
-import enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enclib as enc10_x
 
 if __name__ == '__main__':
@@ -20,12 +20,13 @@ if __name__ == '__main__':
     enc8_2_t = False
     enc8_5_t = False
     enc8_6_t = False
-    enc9_0_t = False
+    enc9_0_t = True
     enc9_3_t = False
     enc9_4_t = False
     enc9_5_t = False
     enc9_6_t = False
-    enc9_7_t = True
+    enc9_7_t = False
+    enc9_8_t = False
     enc10_x_t = True
 
     if enc2_t:
@@ -146,6 +147,14 @@ if __name__ == '__main__':
         else:
             print("ENC9.7 FAIL")
 
+    if enc9_8_t:
+        start = time.time()
+        enc9_8_e = enc9_8.encrypt_key(text, "random_key", "salt")
+        if enc9_8.decrypt_key(enc9_8_e, "random_key", "salt") == text:
+            print("ENC9.8", time.time()-start, len(enc9_8_e), sys.getsizeof(enc9_8_e))
+        else:
+            print("ENC9.8 FAIL")
+
     if enc10_x_t:
         start = time.time()
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
@@ -166,8 +175,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        #enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
-        enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
+        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
         #enc10_x.encrypt_file("enc", "Monopoly.Plus.zip", "key", "salt", "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
