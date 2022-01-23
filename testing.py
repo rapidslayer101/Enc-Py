@@ -1,20 +1,5 @@
+# this file contains 2 unused functions that were originally going to go into the main library
 ascii_set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
-
-import time, random
-
-range_start = "1"
-range_end = "9"
-for i in range(100000-1):
-    range_start += "0"
-    range_end += "9"
-
-
-def random_shift_gen(seed):
-    random.seed(seed)
-    return random.randint(int(range_start), int(range_end))
-
-input()
 
 
 def b85s_to_bits(s):
@@ -41,27 +26,3 @@ def bits_to_b85s(b):
             break
         counter += 1
     return b85s
-
-
-string = "hi"
-
-byte_data = b85s_to_bits(string)
-print("Converted")
-
-
-# file
-with open("output1", "wb") as f:
-    f.write(byte_data)
-
-with open("output0", "w") as f:
-    f.write(string)
-
-output = bits_to_b85s(byte_data)
-print("Converted")
-
-if output == string:
-    print("success")
-
-with open("output2", "w") as f:
-    f.write(output)
-input("Done")

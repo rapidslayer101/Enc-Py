@@ -1,6 +1,7 @@
 import sys, time
 from multiprocessing import freeze_support
 import enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc10 as enc10_0
 import enclib as enc10_x
 
 if __name__ == '__main__':
@@ -20,13 +21,14 @@ if __name__ == '__main__':
     enc8_2_t = False
     enc8_5_t = False
     enc8_6_t = False
-    enc9_0_t = True
+    enc9_0_t = False
     enc9_3_t = False
     enc9_4_t = False
     enc9_5_t = False
     enc9_6_t = False
     enc9_7_t = False
-    enc9_8_t = False
+    enc9_8_t = True
+    enc10_0_t = True
     enc10_x_t = True
 
     if enc2_t:
@@ -152,22 +154,36 @@ if __name__ == '__main__':
         enc9_8_e = enc9_8.encrypt_key(text, "random_key", "salt")
         if enc9_8.decrypt_key(enc9_8_e, "random_key", "salt") == text:
             print("ENC9.8", time.time()-start, len(enc9_8_e), sys.getsizeof(enc9_8_e))
+            with open("output98.txt", "wb") as f:
+                if type(enc9_8_e) == list:
+                    for block in enc9_8_e:
+                        f.write(block)
+                else:
+                    f.write(enc9_8_e)
         else:
             print("ENC9.8 FAIL")
+
+    if enc10_0_t:
+        start = time.time()
+        enc10_0_e = enc10_0.encrypt_key(text, "random_key", "salt")
+        if enc10_0.decrypt_key(enc10_0_e, "random_key", "salt") == text:
+            print("ENC10.0", time.time()-start, len(enc10_0_e), sys.getsizeof(enc10_0_e))
+        else:
+            print("ENC10.0 FAIL")
 
     if enc10_x_t:
         start = time.time()
         enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
         if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
-            print("ENC9.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
-            #with open("output97.txt", "wb") as f:
-            #    if type(enc10_x_e) == list:
-            #        for block in enc10_x_e:
-            #            f.write(block)
-            #    else:
-            #        f.write(enc10_x_e)
+            print("ENC10.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
+            with open("output110.txt", "wb") as f:
+                if type(enc10_x_e) == list:
+                    for block in enc10_x_e:
+                        f.write(block)
+                else:
+                    f.write(enc10_x_e)
         else:
-            print("ENC9.x FAIL")
+            print("ENC10.x FAIL")
 
     #enc10_x_e = enc10_x.encrypt_key(input(), "random_key", "salt")
     #print(enc10_x_e)
