@@ -8,7 +8,7 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 10.0.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 10.0.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 block_size = 1000000  # modifies the chunking size
 b64set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 b96set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
@@ -140,9 +140,9 @@ def encrypt(enc, text, alpha, shift_seed, salt, join_dec=None):
             else:
                 text = block_process(text)
                 if type(text) == bytes:
-                    e_chunks = text.split(b"\\000\\")
+                    e_chunks = text.split(b"  ")
                 if type(text) == str:
-                    e_chunks = text.split("\\000\\")
+                    e_chunks = text.split("  ")
 
         if len(e_chunks) == 1:
             shift_seed = str(int(to_hex(96, 10, str(shift_seed)), 36))
@@ -201,12 +201,12 @@ def encrypt_file(enc, file, key, salt, file_output):
                     result_list = encrypt(enc, hash_file.read(), alpha, shift_num, salt)
                 with open(file_output, "wb") as f:
                     for e_block in result_list:
-                        f.write(b"\\000\\")
+                        f.write(b"  ")
                         f.write(e_block)
                 print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
             else:
                 with open(file, "rb") as hash_file:
-                    d_data = encrypt(enc, hash_file.read().split(b"\\000\\")[1:], alpha, shift_num, salt)
+                    d_data = encrypt(enc, hash_file.read().split(b"  ")[1:], alpha, shift_num, salt)
                 if type(d_data[0]) == bytes:
                     with open(f"{file_output}", "wb") as f:
                         for block in d_data:

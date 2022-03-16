@@ -2,18 +2,16 @@ import datetime, re
 from time import time
 from os import path
 from random import choice
-from base64 import b85encode, b64encode as b64enc, b64decode as b64dec
+from base64 import b64encode as b64enc, b64decode as b64dec
 from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 10.0.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 10.0.2 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 block_size = 1000000  # modifies the chunking size
 b64set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 b96set = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
-conv_dict = {v: k for v, k in zip(range(96), b96set)}
-conv_dict_back = {v: k for k, v in conv_dict.items()}
 
 
 def hex_gens(num):
@@ -24,17 +22,17 @@ def to_hex(base_fr, base_to, hex_to_convert):
     decimal = 0
     power = len(hex_to_convert)-1
     for digit in hex_to_convert:
-        decimal += conv_dict_back[digit]*base_fr**power
+        decimal += b96set.index(digit)*base_fr**power
         power -= 1
     hexadecimal = ""
     while decimal > 0:
-        hexadecimal = conv_dict[decimal % base_to]+hexadecimal
+        hexadecimal = b96set[decimal % base_to]+hexadecimal
         decimal = decimal // base_to
     return hexadecimal
 
 
 def to_number(hex_to_convert):
-    return "".join([str(conv_dict_back[x]) for x in hex_to_convert])
+    return "".join([str(b96set.index(x)) for x in hex_to_convert])
 
 
 def get_hex_base(hex_to_check):  # this is only a guess
@@ -44,9 +42,8 @@ def get_hex_base(hex_to_check):  # this is only a guess
 
 
 def pass_to_seed(password, salt):
-    salt = sha512(sha512(b85encode(salt.encode())).hexdigest().encode()).hexdigest()
-    inp = f"{salt[:64]}{password}{salt[64:]}"
-    return to_hex(16, 96, sha512(sha512(b85encode(inp.encode())).hexdigest().encode()).hexdigest())
+    salt = sha512(sha512(salt.encode()).hexdigest().encode()).hexdigest()
+    return to_hex(16, 96, sha512(sha512((salt+password).encode()).hexdigest().encode()).hexdigest())
 
 
 def seed_to_alpha(seed):  # this function requires 129 numbers

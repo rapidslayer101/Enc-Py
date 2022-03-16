@@ -191,7 +191,7 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "Beacon.jar", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "unknown.mp4", "key", "salt", "enc.renc")
         #enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
         #enc10_x.encrypt_file("enc", "Monopoly.Plus.zip", "key", "salt", "enc.renc")
         input()
