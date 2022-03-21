@@ -6,8 +6,7 @@ import enclib as enc10_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc10_x.hex_gens(1000000)
-    #text = enc9_x.hex_gens(100)
+    text = enc10_x.rand_b96_string(1000000)
     #text = text*20
     print(f"TEXT {len(text)}")
 
@@ -27,7 +26,7 @@ if __name__ == '__main__':
     enc9_5_t = False
     enc9_6_t = False
     enc9_7_t = False
-    enc9_8_t = True
+    enc9_8_t = False
     enc10_0_t = True
     enc10_x_t = True
 
@@ -191,9 +190,7 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "unknown.mp4", "key", "salt", "enc.renc")
-        #enc10_x.encrypt_file("enc", "CubaseProjects.zip", "key", "salt", "enc.renc")
-        #enc10_x.encrypt_file("enc", "Monopoly.Plus.zip", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "Vampire.Survivors.v0.2.10c.zip", "key", "salt", "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
         input("Loop.")
