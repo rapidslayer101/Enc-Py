@@ -1,14 +1,18 @@
-import sys, time
+import sys, time, random
 from multiprocessing import freeze_support
 import enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
-import enclib as enc10_x
+import enclib as enc11_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc10_x.rand_b96_string(1000000)
+    text = enc11_x.rand_b96_str(1000000)
     #text = text*20
+    #text = random.randbytes(1000000)
     print(f"TEXT {len(text)}")
+
+    with open("output000.txt", "wb") as f:
+        f.write(text.encode())
 
     enc2_t = False
     enc3_t = False
@@ -28,7 +32,7 @@ if __name__ == '__main__':
     enc9_7_t = False
     enc9_8_t = False
     enc10_0_t = True
-    enc10_x_t = True
+    enc11_x_t = True
 
     if enc2_t:
         print("ENC2.0", enc2.encrypt(text))
@@ -167,14 +171,20 @@ if __name__ == '__main__':
         enc10_0_e = enc10_0.encrypt_key(text, "random_key", "salt")
         if enc10_0.decrypt_key(enc10_0_e, "random_key", "salt") == text:
             print("ENC10.0", time.time()-start, len(enc10_0_e), sys.getsizeof(enc10_0_e))
+            with open("output104.txt", "wb") as f:
+                if type(enc10_0_e) == list:
+                    for block in enc10_0_e:
+                        f.write(block)
+                else:
+                    f.write(enc10_0_e)
         else:
             print("ENC10.0 FAIL")
 
-    if enc10_x_t:
+    if enc11_x_t:
         start = time.time()
-        enc10_x_e = enc10_x.encrypt_key(text, "random_key", "salt")
-        if enc10_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
-            print("ENC10.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
+        enc10_x_e = enc11_x.encrypt_key(text, "random_key", "salt")
+        if enc11_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
+            print("ENC11.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
             with open("output110.txt", "wb") as f:
                 if type(enc10_x_e) == list:
                     for block in enc10_x_e:
@@ -182,12 +192,12 @@ if __name__ == '__main__':
                 else:
                     f.write(enc10_x_e)
         else:
-            print("ENC10.x FAIL")
+            print("ENC11.x FAIL")
 
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "", "key", "salt", "enc.renc")
+        enc11_x.encrypt_file("enc", "Pain_4.mp4", "key", "salt", "enc.renc")
         input()
-        enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
+        enc11_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
         input("Loop.")
 
