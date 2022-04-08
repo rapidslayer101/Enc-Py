@@ -8,13 +8,13 @@ from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 from binascii import a2b_base64, b2a_base64
 
-# enc 10.0.3 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 10.0.4 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 block_size = 1000000  # modifies the chunking size
 b64set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/"
 b96set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
 
 
-def rand_b96_string(num):
+def rand_b96_str(num):
     return "".join(choices(b96set, k=int(num)))
 
 
@@ -46,13 +46,14 @@ def pass_to_seed(password, salt):
     return to_hex(16, 96, sha512(sha512((salt+password).encode()).hexdigest().encode()).hexdigest())
 
 
-def seed_to_alpha(seed):  # this function requires 129 numbers
+def seed_to_data(seed):
+    seed = int(to_hex(96, 16, seed), 36)
     alpha_gen = b64set
     counter, alpha = [0, ""]
     while len(alpha_gen) > 0:
         counter += 2
-        value = int(str(seed)[counter:counter+2]) << 1
-        while value > len(alpha_gen)-1:
+        value = int(str(seed)[counter:counter + 2]) << 1
+        while value > len(alpha_gen) - 1:
             value = value // 2
         if len(str(seed)[counter:]) < 2:
             alpha += alpha_gen
@@ -61,11 +62,7 @@ def seed_to_alpha(seed):  # this function requires 129 numbers
             chosen = alpha_gen[value]
             alpha += chosen
             alpha_gen = alpha_gen.replace(chosen, "")
-    return alpha
-
-
-def seed_to_data(seed):
-    return seed_to_alpha(int(to_hex(96, 16, seed), 36)), to_hex(10, 96, str(int(to_hex(96, 16, seed), 36)))
+    return alpha, to_hex(10, 96, str(seed))
 
 
 def b64pad(master_key):
@@ -137,7 +134,7 @@ def encrypt(enc, text, alpha, shift_seed, salt, join_dec=None):
                 text = block_process(text)
                 if type(text) == bytes:
                     e_chunks = text.split(b"  ")
-                if type(text) == str:
+                else:  # if type(text) == str:
                     e_chunks = text.split("  ")
 
         if len(e_chunks) == 1:

@@ -184,27 +184,10 @@ if __name__ == '__main__':
         else:
             print("ENC10.x FAIL")
 
-    #enc10_x_e = enc10_x.encrypt_key(input(), "random_key", "salt")
-    #print(enc10_x_e)
-    #print(enc10_x.decrypt_key(enc10_x_e, "random_key", "salt"))
-
     input("Inp")
     while True:
-        enc10_x.encrypt_file("enc", "Vampire.Survivors.v0.2.10c.zip", "key", "salt", "enc.renc")
+        enc10_x.encrypt_file("enc", "", "key", "salt", "enc.renc")
         input()
         enc10_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
         input("Loop.")
-
-    #import time
-    #loop = 0
-    #start_time = time.time()
-    #while True:
-    #    loop += 1
-    #    random_stuff = enc10_x.hex_gens(1000000)
-    #    encrypted = enc10_x.encrypt_key(random_stuff, "random_key", "salt")
-    #    if loop % 1 == 0:
-    #        print(loop*1000, time.time() - start_time)
-    #    if not random_stuff == enc10_x.decrypt_key(encrypted, "random_key", "salt"):
-    #        print("fail")
-    #        input()
 
