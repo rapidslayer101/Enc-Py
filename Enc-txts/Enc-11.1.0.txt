@@ -8,8 +8,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.1.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
-# todo compression as a whole not per block
+# enc 11.1.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 # todo not same result with same key every time
 # todo new secure seeding
 block_size = 1000000  # modifies the chunking size
@@ -68,21 +67,28 @@ def _otp_(amount, shift_num, alpha):  # todo redesign?
     return shift_value
 
 
-def _xor_(enc, data, seed, alpha):
+def _xor_(plaintext, shift_num, enc):
+    if enc:
+        return bytes([(x ^ ord(y)) for x, y in zip(compress(plaintext, 9), shift_num)])
+    else:
+        return bytes([x ^ ord(y) for x, y in zip(plaintext, shift_num)])
+
+
+def _encrypt_block_(enc, data, block_seed, alpha, send_end=None):
     if enc:
         if type(data) != bytes:
             data = data.encode()
-        data = compress(data, 9)
-        shift_num = _otp_(len(data)*1.1, str((to_hex(96, 10, str(seed)))), alpha)
-        return bytes([(x ^ ord(y)) for x, y in zip(data, shift_num)])
-
+        block = _xor_(data, _otp_(len(data), str((to_hex(96, 10, str(block_seed)))), alpha), True)
     else:
-        shift_num = _otp_(len(data)*1.1, str((to_hex(96, 10, str(seed)))), alpha)
-        block = decompress(bytes([x ^ ord(y) for x, y in zip(data, shift_num)]))
+        block = decompress(_xor_(data, _otp_(len(data), str((to_hex(96, 10, str(block_seed)))), alpha), False))
         try:
-            return block.decode()
+            block = block.decode()
         except UnicodeDecodeError:
-            return block
+            pass
+    if send_end:
+        send_end.send(block)
+    else:
+        return block
 
 
 def _encrypter_(enc, text, alpha, shift_seed, salt, join_dec=None):
@@ -96,10 +102,17 @@ def _encrypter_(enc, text, alpha, shift_seed, salt, join_dec=None):
                 text = text.split("  ")
     if len(text) == 1:
         text = text[0]
+        shift_seed = to_hex(96, 10, str(shift_seed))
         if enc:
-            return _xor_(True, text, str(to_hex(96, 10, str(shift_seed))), alpha)
+            if type(text) != bytes:
+                text = text.encode()
+            return _xor_(text, _otp_(len(text), str(shift_seed), alpha), True)
         else:
-            return _xor_(False, text, str(to_hex(96, 10, str(shift_seed))), alpha)
+            output_end = decompress(_xor_(text, _otp_(len(text), str(shift_seed), alpha), False))
+            try:
+                return output_end.decode()
+            except UnicodeDecodeError:
+                return output_end
     else:
         print(f"Launching {len(text)} threads")
         block_seeds = []
@@ -107,7 +120,7 @@ def _encrypter_(enc, text, alpha, shift_seed, salt, join_dec=None):
             shift_seed = pass_to_seed(shift_seed, salt)
             block_seeds.append(shift_seed)
         pool = Pool(cpu_count())
-        result_objects = [pool.apply_async(_xor_, args=(enc, text[x], block_seeds[x], alpha))
+        result_objects = [pool.apply_async(_encrypt_block_, args=(enc, text[x], block_seeds[x], alpha))
                           for x in range(0, len(text))]
         pool.close()
         if join_dec:

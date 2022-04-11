@@ -159,12 +159,6 @@ if __name__ == '__main__':
         enc9_8_e = enc9_8.encrypt_key(text, "random_key", "salt")
         if enc9_8.decrypt_key(enc9_8_e, "random_key", "salt") == text:
             print("ENC9.8", time.time()-start, len(enc9_8_e), sys.getsizeof(enc9_8_e))
-            with open("output98.txt", "wb") as f:
-                if type(enc9_8_e) == list:
-                    for block in enc9_8_e:
-                        f.write(block)
-                else:
-                    f.write(enc9_8_e)
         else:
             print("ENC9.8 FAIL")
 
@@ -189,18 +183,12 @@ if __name__ == '__main__':
         enc10_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
         if enc11_x.dec_from_pass(enc10_x_e, "random_key", "salt") == text:
             print("ENC11.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
-            with open("output110.txt", "wb") as f:
-                if type(enc10_x_e) == list:
-                    for block in enc10_x_e:
-                        f.write(block)
-                else:
-                    f.write(enc10_x_e)
         else:
             print("ENC11.x FAIL")
 
     input("Inp")
     while True:
-        enc11_x.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc")
+        enc11_x.enc_file_from_pass("FileZilla_3.58.0_win64_sponsored-setup.exe", "key", "salt", "enc.renc")
         input()
         enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.exe")
         input("Loop.")
