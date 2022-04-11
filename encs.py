@@ -1,7 +1,8 @@
-import sys, time, random
+import sys, time
 from multiprocessing import freeze_support
 import enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
+import enc11 as enc11_0
 import enclib as enc11_x
 
 if __name__ == '__main__':
@@ -31,7 +32,8 @@ if __name__ == '__main__':
     enc9_6_t = False
     enc9_7_t = False
     enc9_8_t = False
-    enc10_0_t = True
+    enc10_0_t = False
+    enc11_0_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -171,19 +173,21 @@ if __name__ == '__main__':
         enc10_0_e = enc10_0.encrypt_key(text, "random_key", "salt")
         if enc10_0.decrypt_key(enc10_0_e, "random_key", "salt") == text:
             print("ENC10.0", time.time()-start, len(enc10_0_e), sys.getsizeof(enc10_0_e))
-            with open("output104.txt", "wb") as f:
-                if type(enc10_0_e) == list:
-                    for block in enc10_0_e:
-                        f.write(block)
-                else:
-                    f.write(enc10_0_e)
         else:
             print("ENC10.0 FAIL")
 
+    if enc11_0_t:
+        start = time.time()
+        enc11_0_e = enc11_0.encrypt_key(text, "random_key", "salt")
+        if enc11_0.decrypt_key(enc11_0_e, "random_key", "salt") == text:
+            print("ENC11.0", time.time()-start, len(enc11_0_e), sys.getsizeof(enc11_0_e))
+        else:
+            print("ENC11.0 FAIL")
+
     if enc11_x_t:
         start = time.time()
-        enc10_x_e = enc11_x.encrypt_key(text, "random_key", "salt")
-        if enc11_x.decrypt_key(enc10_x_e, "random_key", "salt") == text:
+        enc10_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
+        if enc11_x.dec_from_pass(enc10_x_e, "random_key", "salt") == text:
             print("ENC11.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
             with open("output110.txt", "wb") as f:
                 if type(enc10_x_e) == list:
@@ -196,8 +200,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc11_x.encrypt_file("enc", "Pain_4.mp4", "key", "salt", "enc.renc")
+        enc11_x.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc")
         input()
-        enc11_x.encrypt_file("dec", "enc.renc", "key", "salt", "test")
+        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.exe")
         input("Loop.")
 
