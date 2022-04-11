@@ -8,7 +8,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.2.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.1.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 # todo not same result with same key every time
 # todo new secure seeding
 block_size = 1000000  # modifies the chunking size
@@ -34,28 +34,28 @@ def get_hex_base(hex_to_check):  # this is only a guess
             return i+2
 
 
-def pass_to_key(password, salt):  # todo redo
+def pass_to_seed(password, salt):  # todo redo
     salt = sha512(sha512(salt.encode()).hexdigest().encode()).hexdigest()
     return to_hex(16, 96, sha512(sha512((salt+password).encode()).hexdigest().encode()).hexdigest())
 
 
-def key_to_data(key):
-    key = int(to_hex(96, 16, key), 36)
+def seed_to_data(seed):
+    seed = int(to_hex(96, 16, seed), 36)
     alpha_gen = b96set
     counter, alpha = [0, ""]
     while len(alpha_gen) > 0:
         counter += 2
-        value = int(str(key)[counter:counter+2]) << 1
+        value = int(str(seed)[counter:counter+2]) << 1
         while value > len(alpha_gen) - 1:
             value = value // 2
-        if len(str(key)[counter:]) < 2:
+        if len(str(seed)[counter:]) < 2:
             alpha += alpha_gen
             alpha_gen = alpha_gen.replace(alpha_gen, "")
         else:
             chosen = alpha_gen[value]
             alpha += chosen
             alpha_gen = alpha_gen.replace(chosen, "")
-    return alpha, to_hex(10, 96, str(key))
+    return alpha, to_hex(10, 96, str(seed))
 
 
 def _otp_(amount, shift_num, alpha):  # todo redesign?
@@ -67,51 +67,71 @@ def _otp_(amount, shift_num, alpha):  # todo redesign?
     return shift_value
 
 
-def _xor_(enc, data, seed, alpha):
-    shift_num = _otp_(len(data), str((to_hex(96, 10, str(seed)))), alpha)
+def _xor_(plaintext, shift_num, enc):
     if enc:
-        return bytes([(x ^ ord(y)) for x, y in zip(data, shift_num)])
-
+        return bytes([(x ^ ord(y)) for x, y in zip(compress(plaintext, 9), shift_num)])
     else:
-        return bytes([x ^ ord(y) for x, y in zip(data, shift_num)])
+        return bytes([x ^ ord(y) for x, y in zip(plaintext, shift_num)])
 
 
-def _encrypter_(enc, text, alpha, seed, salt, join_dec=None):
+def _encrypt_block_(enc, data, block_seed, alpha, send_end=None):
     if enc:
-        if type(text) != bytes:
-            text = text.encode()
-        text = compress(text, 9)
-    text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
+        if type(data) != bytes:
+            data = data.encode()
+        block = _xor_(data, _otp_(len(data), str((to_hex(96, 10, str(block_seed)))), alpha), True)
+    else:
+        block = decompress(_xor_(data, _otp_(len(data), str((to_hex(96, 10, str(block_seed)))), alpha), False))
+        try:
+            block = block.decode()
+        except UnicodeDecodeError:
+            pass
+    if send_end:
+        send_end.send(block)
+    else:
+        return block
+
+
+def _encrypter_(enc, text, alpha, shift_seed, salt, join_dec=None):
+    if enc:
+        text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
+    else:
+        if not type(text) == list:
+            if type(text) == bytes:
+                text = text.split(b"  ")
+            else:  # if type(text) == str:
+                text = text.split("  ")
     if len(text) == 1:
         text = text[0]
+        shift_seed = to_hex(96, 10, str(shift_seed))
         if enc:
-            return _xor_(True, text, str(to_hex(96, 10, str(seed))), alpha)
+            if type(text) != bytes:
+                text = text.encode()
+            return _xor_(text, _otp_(len(text), str(shift_seed), alpha), True)
         else:
-            block = decompress(_xor_(False, text, str(to_hex(96, 10, str(seed))), alpha))
+            output_end = decompress(_xor_(text, _otp_(len(text), str(shift_seed), alpha), False))
             try:
-                return block.decode()
+                return output_end.decode()
             except UnicodeDecodeError:
-                return block
+                return output_end
     else:
         print(f"Launching {len(text)} threads")
         block_seeds = []
         for i in range(len(text)+1):
-            seed = pass_to_key(seed, salt)
-            block_seeds.append(seed)
+            shift_seed = pass_to_seed(shift_seed, salt)
+            block_seeds.append(shift_seed)
         pool = Pool(cpu_count())
-        result_objects = [pool.apply_async(_xor_, args=(enc, text[x], block_seeds[x], alpha))
+        result_objects = [pool.apply_async(_encrypt_block_, args=(enc, text[x], block_seeds[x], alpha))
                           for x in range(0, len(text))]
         pool.close()
         if join_dec:
             d_data = b""
             for x in result_objects:
-                d_data += x.get()
-            if not enc:
-                d_data = decompress(d_data)
+                new_data = x.get()
                 try:
-                    d_data = d_data.decode()
-                except UnicodeDecodeError:
-                    pass
+                    d_data += new_data
+                except TypeError:
+                    d_data = ""
+                    d_data += new_data
         else:
             d_data = [x.get() for x in result_objects]
         pool.join()
@@ -132,17 +152,18 @@ def _file_encrypter_(enc, file, password, salt, file_output):
     if path.exists(file):
         file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
         print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/58552080.2181, 2)}s")
-        alpha, shift_num = key_to_data(pass_to_key(password, salt))
+        alpha, shift_num = seed_to_data(pass_to_seed(password, salt))
         if enc:
             with open(file, 'rb') as hash_file:
-                e_blocks = _encrypter_(enc, hash_file.read(), alpha, shift_num, salt)
+                result_list = _encrypter_(enc, hash_file.read(), alpha, shift_num, salt)
             with open(file_output, "wb") as f:
-                for block in e_blocks:
-                    f.write(block)
+                for e_block in result_list:
+                    f.write(b"  ")
+                    f.write(e_block)
             print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
         else:
             with open(file, "rb") as hash_file:
-                d_data = _encrypter_(enc, hash_file.read(), alpha, shift_num, salt)
+                d_data = _encrypter_(enc, hash_file.read().split(b"  ")[1:], alpha, shift_num, salt)
             if type(d_data[0]) == bytes:
                 with open(f"{file_output}", "wb") as f:
                     for block in d_data:
@@ -151,23 +172,19 @@ def _file_encrypter_(enc, file, password, salt, file_output):
                 with open(f"{file_output}", "w", encoding="utf-8") as f:
                     for block in d_data:
                         f.write(block.replace("\r", ""))
-            with open(f"{file_output}", "rb") as f:
-                data = decompress(f.read())
-            with open(f"{file_output}", "wb") as f:
-                f.write(data)
             print(f"DECRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
     else:
         return "File not found"
 
 
 def enc_from_pass(text, password, salt):
-    alpha, shift_num = key_to_data(pass_to_key(password, salt))
-    return _encrypter_(True, text, alpha, shift_num, salt, True)
+    alpha, shift_num = seed_to_data(pass_to_seed(password, salt))
+    return _encrypter_(True, text, alpha, shift_num, salt)
 
 
 def dec_from_pass(e_text, password, salt):
-    alpha, shift_num = key_to_data(pass_to_key(password, salt))
-    return _encrypter_(False, e_text, alpha, shift_num, salt, True)
+    alpha, shift_num = seed_to_data(pass_to_seed(password, salt))
+    return _encrypter_(False, e_text, alpha, shift_num, salt, "join_dec")
 
 
 def enc_file_from_pass(file, password, salt, file_output):

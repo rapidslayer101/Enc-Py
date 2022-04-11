@@ -1,19 +1,18 @@
 import sys, time
+import random
 from multiprocessing import freeze_support
-import enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6, enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
+import enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
+import enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
 import enc11 as enc11_0
 import enclib as enc11_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc11_x.rand_b96_str(1000000)
+    text = enc11_x.rand_b96_str(2000000)
     #text = text*20
     #text = random.randbytes(1000000)
     print(f"TEXT {len(text)}")
-
-    with open("output000.txt", "wb") as f:
-        f.write(text.encode())
 
     enc2_t = False
     enc3_t = False
@@ -33,7 +32,8 @@ if __name__ == '__main__':
     enc9_7_t = False
     enc9_8_t = False
     enc10_0_t = False
-    enc11_0_t = True
+    enc11_0_t = False
+    enc11_1_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -178,11 +178,24 @@ if __name__ == '__main__':
         else:
             print("ENC11.0 FAIL")
 
+    if enc11_1_t:
+        start = time.time()
+        enc11_1_e = enc11_1.enc_from_pass(text, "random_key", "salt")
+        if enc11_1.dec_from_pass(enc11_1_e, "random_key", "salt") == text:
+            print("ENC11.1", time.time()-start, len(enc11_1_e), sys.getsizeof(enc11_1_e))
+            with open("output111.txt", "wb") as f:
+                for block in enc11_1_e:
+                    f.write(block)
+        else:
+            print("ENC11.1 FAIL")
+
     if enc11_x_t:
         start = time.time()
-        enc10_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
-        if enc11_x.dec_from_pass(enc10_x_e, "random_key", "salt") == text:
-            print("ENC11.x", time.time()-start, len(enc10_x_e), sys.getsizeof(enc10_x_e))
+        enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
+        if enc11_x.dec_from_pass(enc11_x_e, "random_key", "salt") == text:
+            print("ENC11.x", time.time()-start, len(enc11_x_e), sys.getsizeof(enc11_x_e))
+            with open("output11x.txt", "wb") as f:
+                f.write(enc11_x_e)
         else:
             print("ENC11.x FAIL")
 
