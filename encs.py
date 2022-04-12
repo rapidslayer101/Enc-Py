@@ -9,7 +9,7 @@ import enclib as enc11_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc11_x.rand_b96_str(2000000)
+    text = enc11_x.rand_b96_str(1000000)
     #text = text*20
     #text = random.randbytes(1000000)
     print(f"TEXT {len(text)}")
@@ -183,9 +183,6 @@ if __name__ == '__main__':
         enc11_1_e = enc11_1.enc_from_pass(text, "random_key", "salt")
         if enc11_1.dec_from_pass(enc11_1_e, "random_key", "salt") == text:
             print("ENC11.1", time.time()-start, len(enc11_1_e), sys.getsizeof(enc11_1_e))
-            with open("output111.txt", "wb") as f:
-                for block in enc11_1_e:
-                    f.write(block)
         else:
             print("ENC11.1 FAIL")
 
@@ -194,14 +191,19 @@ if __name__ == '__main__':
         enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
         if enc11_x.dec_from_pass(enc11_x_e, "random_key", "salt") == text:
             print("ENC11.x", time.time()-start, len(enc11_x_e), sys.getsizeof(enc11_x_e))
-            with open("output11x.txt", "wb") as f:
-                f.write(enc11_x_e)
         else:
             print("ENC11.x FAIL")
 
+    #num = ~*~*60408046820
+    #print(num)
+    #num2 = enc11_x.to_hex(10, 96, num)
+    #print(num2)
+    #num3 = enc11_x.pass_to_key(num2, str(num))
+    #print(num3)
+
     input("Inp")
     while True:
-        enc11_x.enc_file_from_pass("FileZilla_3.58.0_win64_sponsored-setup.exe", "key", "salt", "enc.renc")
+        enc11_x.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc")
         input()
         enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.exe")
         input("Loop.")
