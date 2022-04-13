@@ -1,7 +1,7 @@
 import sys, time
 import random
 from multiprocessing import freeze_support
-import enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
+import enc11_3, enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
 import enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
 import enc11 as enc11_0
@@ -9,10 +9,10 @@ import enclib as enc11_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc11_x.rand_b96_str(1000000)
+    text = enc11_x.rand_b96_str(2000000)
     #text = text*20
     #text = random.randbytes(1000000)
-    print(f"TEXT {len(text)}")
+    print(f"{len(text)/1000000} Million chars")
 
     enc2_t = False
     enc3_t = False
@@ -33,7 +33,8 @@ if __name__ == '__main__':
     enc9_8_t = False
     enc10_0_t = False
     enc11_0_t = False
-    enc11_1_t = True
+    enc11_1_t = False
+    enc11_3_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -186,6 +187,14 @@ if __name__ == '__main__':
         else:
             print("ENC11.1 FAIL")
 
+    if enc11_3_t:
+        start = time.time()
+        enc11_3_e = enc11_3.enc_from_pass(text, "random_key", "salt")
+        if enc11_3.dec_from_pass(enc11_3_e, "random_key", "salt") == text:
+            print("ENC11.3", time.time()-start, len(enc11_3_e), sys.getsizeof(enc11_3_e))
+        else:
+            print("ENC11.3 FAIL")
+
     if enc11_x_t:
         start = time.time()
         enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
@@ -193,13 +202,6 @@ if __name__ == '__main__':
             print("ENC11.x", time.time()-start, len(enc11_x_e), sys.getsizeof(enc11_x_e))
         else:
             print("ENC11.x FAIL")
-
-    #num = ~*~*60408046820
-    #print(num)
-    #num2 = enc11_x.to_hex(10, 96, num)
-    #print(num2)
-    #num3 = enc11_x.pass_to_key(num2, str(num))
-    #print(num3)
 
     input("Inp")
     while True:

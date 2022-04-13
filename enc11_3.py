@@ -1,5 +1,4 @@
-import datetime
-from sys import byteorder
+import datetime, sys
 from re import search, findall
 from time import time
 from os import path
@@ -8,7 +7,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.4.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.3.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 # todo not same result with same key every time
 # todo new secure seeding
 block_size = 1000000  # modifies the chunking size
@@ -58,16 +57,16 @@ def key_to_data(key):
     return alpha.encode(), to_hex(10, 96, str(key))
 
 
-def _xor_(data, seed, alpha, byte_ord=byteorder):
-    shift_value = []
-    shift_num = str(to_hex(96, 10, str(seed)))
-    for i in range((len(data)//64)+1):
+def _xor_(data, seed, alpha, byteorder=sys.byteorder):
+    shift_value = ""
+    shift_num = str((to_hex(96, 10, str(seed))))
+    while len(shift_value) < len(data) * 2:
         shift_num = sha512(shift_num.encode()+alpha).hexdigest()
-        shift_value.append(shift_num)
-    key = bytearray.fromhex("".join(shift_value))[:len(data)]
+        shift_value += shift_num
+    key = bytearray.fromhex(shift_value)[:len(data)]
     key, var = key[:len(data)], data[:len(key)]
-    int_enc = (int.from_bytes(var, byte_ord) ^ int.from_bytes(key, byte_ord))
-    return int_enc.to_bytes(len(var), byte_ord)
+    int_enc = (int.from_bytes(var, byteorder) ^ int.from_bytes(key, byteorder))
+    return int_enc.to_bytes(len(var), byteorder)
 
 
 def _encrypter_(enc, text, alpha, seed, salt, compressor, join_dec=None):
@@ -164,18 +163,8 @@ def enc_from_pass(text, password, salt):
     return _encrypter_(True, text, alpha, shift_num, salt, True, True)
 
 
-def enc_from_key(text, key, salt):
-    alpha, shift_num = key_to_data(key)
-    return _encrypter_(True, text, alpha, shift_num, salt, True, True)
-
-
 def dec_from_pass(e_text, password, salt):
     alpha, shift_num = key_to_data(pass_to_key(password, salt))
-    return _encrypter_(False, e_text, alpha, shift_num, salt, True, True)
-
-
-def dec_from_key(e_text, key, salt):
-    alpha, shift_num = key_to_data(key)
     return _encrypter_(False, e_text, alpha, shift_num, salt, True, True)
 
 
