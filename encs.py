@@ -1,7 +1,7 @@
 import sys, time
 import random
 from multiprocessing import freeze_support
-import enc11_3, enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
+import enc11_4, enc11_3, enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
 import enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
 import enc11 as enc11_0
@@ -9,7 +9,8 @@ import enclib as enc11_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc11_x.rand_b96_str(2000000)
+    text = enc11_x.rand_b96_str(1000000)
+    #text = enc11_x.rand_b96_str(100)
     #text = text*20
     #text = random.randbytes(1000000)
     print(f"{len(text)/1000000} Million chars")
@@ -34,7 +35,8 @@ if __name__ == '__main__':
     enc10_0_t = False
     enc11_0_t = False
     enc11_1_t = False
-    enc11_3_t = True
+    enc11_3_t = False
+    enc11_4_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -195,6 +197,14 @@ if __name__ == '__main__':
         else:
             print("ENC11.3 FAIL")
 
+    if enc11_4_t:
+        start = time.time()
+        enc11_4_e = enc11_4.enc_from_pass(text, "random_key", "salt")
+        if enc11_4.dec_from_pass(enc11_4_e, "random_key", "salt") == text:
+            print("ENC11.4", time.time()-start, len(enc11_4_e), sys.getsizeof(enc11_4_e))
+        else:
+            print("ENC11.4 FAIL")
+
     if enc11_x_t:
         start = time.time()
         enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
@@ -203,10 +213,23 @@ if __name__ == '__main__':
         else:
             print("ENC11.x FAIL")
 
+    #text = enc11_x.rand_b96_str(1000000)
+    #loop = 0
+    #while True:
+    #    loop += 1
+    #    enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
+    #    if not enc11_x.dec_from_pass(enc11_x_e, "random_key", "salt") == text:
+    #        print("ENC11.x FAIL")
+    #        input()
+    #    else:
+    #        print(enc11_x_e[:100])
+    #    if loop % 100 == 0:
+    #        print(f"Loop {loop}")
+
     input("Inp")
     while True:
-        enc11_x.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc")
+        enc11_x.enc_file_from_pass("hi_rupert.mp3", "key", "salt", "enc.renc", False)
         input()
-        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.exe")
+        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.mp3", False)
         input("Loop.")
 
