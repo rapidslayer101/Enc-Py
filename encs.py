@@ -1,7 +1,7 @@
 import sys, time
 import random
 from multiprocessing import freeze_support
-import enc11_4, enc11_3, enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
+import enc11_5, enc11_4, enc11_3, enc11_1, enc9_8, enc9_7, enc9_6, enc9_5, enc9_4, enc9_3, enc9_0, enc8_6
 import enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
 import enc11 as enc11_0
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     enc11_1_t = False
     enc11_3_t = False
     enc11_4_t = True
+    enc11_5_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -205,10 +206,21 @@ if __name__ == '__main__':
         else:
             print("ENC11.4 FAIL")
 
+    if enc11_5_t:
+        start = time.time()
+        enc11_5_e = enc11_5.enc_from_pass(text, "random_key", "salt")
+        if enc11_5.dec_from_pass(enc11_5_e, "random_key", "salt") == text:
+            print("ENC11.5", time.time()-start, len(enc11_5_e), sys.getsizeof(enc11_5_e))
+        else:
+            print("ENC11.5 FAIL")
+
     if enc11_x_t:
         start = time.time()
-        enc11_x_e = enc11_x.enc_from_pass(text, "random_key", "salt")
-        if enc11_x.dec_from_pass(enc11_x_e, "random_key", "salt") == text:
+        key = enc11_x.pass_to_key("random_key", "salt", 100000)
+        print("P2K.TME", time.time()-start)
+        start = time.time()
+        enc11_x_e = enc11_x.enc_from_key(text, key)
+        if enc11_x.dec_from_key(enc11_x_e, key) == text:
             print("ENC11.x", time.time()-start, len(enc11_x_e), sys.getsizeof(enc11_x_e))
         else:
             print("ENC11.x FAIL")
@@ -228,8 +240,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        enc11_x.enc_file_from_pass("hi_rupert.mp3", "key", "salt", "enc.renc", False)
+        enc11_x.enc_file_from_pass("hi_rupert.mp3", "key", "salt", "enc.renc", True)
         input()
-        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.mp3", False)
+        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.mp3", True)
         input("Loop.")
 

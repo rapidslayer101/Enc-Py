@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from sys import byteorder
-from re import search
+from re import search, findall
 from time import time
 from os import path
 from random import choices
@@ -8,10 +8,10 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.6.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.5.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# todo new secure seeding
 block_size = 1000000  # modifies the chunking size
 xor_salt_len = 8  # 94^16 combinations
-pass_depth = 100000
 b96set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
 b94set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
 
@@ -39,22 +39,20 @@ def get_hex_base(hex_to_check):  # this is only a guess
             return i+2
 
 
-def pass_to_key(password, salt, depth):  # todo redo
-    password = password.encode()
-    salt = salt.encode()
-    for i in range(depth):
-        password = sha512(password+salt).digest()
-    return to_hex(16, 96, password.hex())
+def pass_to_key(password, salt):  # todo redo
+    salt = sha512(sha512(salt.encode()).hexdigest().encode()).hexdigest()
+    return to_hex(16, 96, sha512(sha512((salt+password).encode()).hexdigest().encode()).hexdigest())
 
 
-def _xor_(data, key, xor_salt):
-    key_value = []
+def _xor_(data, key, xor_salt, byte_ord=byteorder):
     key = key.encode()
+    key_value = []
     for i in range((len(data)//64)+1):
         key = sha512(key+xor_salt).digest()
         key_value.append(key)
-    key = b"".join(key_value)[:len(data)]
-    return (int.from_bytes(data, byteorder) ^ int.from_bytes(key, byteorder)).to_bytes(len(data), byteorder)
+    key = b"".join(key_value)
+    key, var = key[:len(data)], data[:len(key)]
+    return (int.from_bytes(var, byte_ord) ^ int.from_bytes(key, byte_ord)).to_bytes(len(var), byte_ord)
 
 
 def _encrypter_(enc, text, key, compressor, join_dec=None):
@@ -99,7 +97,7 @@ def _encrypter_(enc, text, key, compressor, join_dec=None):
                 alpha_gen = alpha_gen.replace(chosen, "")
         block_keys = []
         for i in range(len(text)):
-            key = pass_to_key(key, keys_salt, 1)
+            key = pass_to_key(key, keys_salt)
             block_keys.append(key)
         print(f"Launching {len(text)} threads")
         pool = Pool(cpu_count())
@@ -169,28 +167,28 @@ def _file_encrypter_(enc, file, key, file_output, compressor):
         return "File not found"
 
 
-def enc_from_pass(text, password, salt, depth=pass_depth):
-    return _encrypter_(True, text, pass_to_key(password, salt, depth), True, True)
+def enc_from_pass(text, password, salt):
+    return _encrypter_(True, text, pass_to_key(password, salt), True, True)
 
 
 def enc_from_key(text, key):
     return _encrypter_(True, text, key, True, True)
 
 
-def dec_from_pass(e_text, password, salt, depth=pass_depth):
-    return _encrypter_(False, e_text, pass_to_key(password, salt, depth), True, True)
+def dec_from_pass(e_text, password, salt):
+    return _encrypter_(False, e_text, pass_to_key(password, salt), True, True)
 
 
 def dec_from_key(e_text, key):
     return _encrypter_(False, e_text, key, True, True)
 
 
-def enc_file_from_pass(file, password, salt, file_output, depth=pass_depth, compressor=False):
-    return _file_encrypter_(True, file, pass_to_key(password, salt, depth), file_output, compressor)
+def enc_file_from_pass(file, password, salt, file_output, compressor=False):
+    return _file_encrypter_(True, file, pass_to_key(password, salt), file_output, compressor)
 
 
-def dec_file_from_pass(e_file, password, salt, file_output, depth=pass_depth, compressor=False):
-    return _file_encrypter_(False, e_file, pass_to_key(password, salt, depth), file_output, compressor)
+def dec_file_from_pass(e_file, password, salt, file_output, compressor=False):
+    return _file_encrypter_(False, e_file, pass_to_key(password, salt), file_output, compressor)
 
 
 def search(data, filter_fr, filter_to):
@@ -199,6 +197,11 @@ def search(data, filter_fr, filter_to):
         return m.group(1)
     else:
         return None
+
+
+def get_links(data):
+    return ('\n'.join((findall(r'(https?://[^\s]+)', str(data))))) + \
+           ('\n'.join((findall(r'(http?://[^\s]+)', str(data)))))
 
 
 def round_tme(dt=None, round_to=30):
