@@ -8,10 +8,10 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.7.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
-default_block_size = 5000000  # modifies the chunking size
-xor_salt_len = 8  # 94^8 combinations
-default_pass_depth = 100000
+# enc 11.6.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+block_size = 1000000  # modifies the chunking size
+xor_salt_len = 8  # 94^16 combinations
+pass_depth = 100000
 b96set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
 b94set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
 
@@ -57,7 +57,7 @@ def _xor_(data, key, xor_salt):
     return (int.from_bytes(data, byteorder) ^ int.from_bytes(key, byteorder)).to_bytes(len(data), byteorder)
 
 
-def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
+def _encrypter_(enc, text, key, compressor, join_dec=None):
     if enc:
         if type(text) != bytes:
             text = text.encode()
@@ -66,7 +66,9 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
         xor_salt = "".join(choices(b94set, k=xor_salt_len)).encode()
     else:
         xor_salt, text = text[:xor_salt_len], text[xor_salt_len:]
-    if len(text)//block_size < 11:
+    text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
+    if len(text) == 1:
+        text = text[0]
         if enc:
             return xor_salt+_xor_(text, key, xor_salt)
         else:
@@ -79,14 +81,13 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
             except UnicodeDecodeError:
                 return block
     else:
-        text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         print(f"Generating {len(text)} block keys")
         key1 = int(to_hex(96, 16, key), 36)
         alpha_gen = b96set
         counter, keys_salt = [0, ""]
         while len(alpha_gen) > 0:
             counter += 2
-            value = int(str(key1)[counter:counter+2]) << 1
+            value = int(str(key1)[counter:counter + 2]) << 1
             while value > len(alpha_gen) - 1:
                 value = value // 2
             if len(str(key1)[counter:]) < 2:
@@ -105,34 +106,7 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
         result_objects = [pool.apply_async(_xor_, args=(text[x], block_keys[x], xor_salt))
                           for x in range(0, len(text))]
         pool.close()
-        if file_output:
-            if enc:
-                with open(file_output, "wb") as f:
-                    loop = 0
-                    for x in result_objects:
-                        loop += 1
-                        if loop == 1:
-                            data = xor_salt+x.get()
-                            f.write(data)
-                        else:
-                            f.write(x.get())
-            else:
-                d_data = [x.get() for x in result_objects]
-                if type(d_data[0]) == bytes:
-                    with open(f"{file_output}", "wb") as f:
-                        for block in d_data:
-                            f.write(block)
-                if type(d_data[0]) == str:
-                    with open(f"{file_output}", "w", encoding="utf-8") as f:
-                        for block in d_data:
-                            f.write(block.replace("\r", ""))
-                if compressor:
-                    with open(f"{file_output}", "rb") as f:
-                        data = decompress(f.read())
-                    with open(f"{file_output}", "wb") as f:
-                        f.write(data)
-            pool.join()
-        else:
+        if join_dec:
             d_data = b""
             for x in result_objects:
                 d_data += x.get()
@@ -145,8 +119,12 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
                     d_data = d_data.decode()
                 except UnicodeDecodeError:
                     pass
-            pool.join()
-            return d_data
+        else:
+            d_data = [x.get() for x in result_objects]
+            if enc:
+                d_data[0] = xor_salt+d_data[0]
+        pool.join()
+        return d_data
 
 
 def get_file_size(file):
@@ -163,35 +141,55 @@ def _file_encrypter_(enc, file, key, file_output, compressor):
     if path.exists(file):
         file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
         print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/136731168.599, 2)}s")
-        with open(file, 'rb') as hash_file:
-            data = hash_file.read()
-        _encrypter_(enc, data, key, default_block_size, compressor, file_output)
-        print(f"ENC/DEC COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
+        if enc:
+            with open(file, 'rb') as hash_file:
+                e_blocks = _encrypter_(True, hash_file.read(), key, compressor)
+            with open(file_output, "wb") as f:
+                for block in e_blocks:
+                    f.write(block)
+            print(f"ENCRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
+        else:
+            with open(file, "rb") as hash_file:
+                d_data = _encrypter_(False, hash_file.read(), key, compressor)
+            if type(d_data[0]) == bytes:
+                with open(f"{file_output}", "wb") as f:
+                    for block in d_data:
+                        f.write(block)
+            if type(d_data[0]) == str:
+                with open(f"{file_output}", "w", encoding="utf-8") as f:
+                    for block in d_data:
+                        f.write(block.replace("\r", ""))
+            if compressor:
+                with open(f"{file_output}", "rb") as f:
+                    data = decompress(f.read())
+                with open(f"{file_output}", "wb") as f:
+                    f.write(data)
+            print(f"DECRYPTION COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
     else:
         return "File not found"
 
 
-def enc_from_pass(text, password, salt, depth=default_pass_depth, block_size=default_block_size):
-    return _encrypter_(True, text, pass_to_key(password, salt, depth), block_size, True)
+def enc_from_pass(text, password, salt, depth=pass_depth):
+    return _encrypter_(True, text, pass_to_key(password, salt, depth), True, True)
 
 
-def enc_from_key(text, key, block_size=default_block_size):
-    return _encrypter_(True, text, key, block_size, True)
+def enc_from_key(text, key):
+    return _encrypter_(True, text, key, True, True)
 
 
-def dec_from_pass(e_text, password, salt, depth=default_pass_depth, block_size=default_block_size):
-    return _encrypter_(False, e_text, pass_to_key(password, salt, depth), block_size, True)
+def dec_from_pass(e_text, password, salt, depth=pass_depth):
+    return _encrypter_(False, e_text, pass_to_key(password, salt, depth), True, True)
 
 
-def dec_from_key(e_text, key, block_size=default_block_size):
-    return _encrypter_(False, e_text, key, block_size, True)
+def dec_from_key(e_text, key):
+    return _encrypter_(False, e_text, key, True, True)
 
 
-def enc_file_from_pass(file, password, salt, file_output, depth=default_pass_depth, compressor=False):
+def enc_file_from_pass(file, password, salt, file_output, depth=pass_depth, compressor=False):
     return _file_encrypter_(True, file, pass_to_key(password, salt, depth), file_output, compressor)
 
 
-def dec_file_from_pass(e_file, password, salt, file_output, depth=default_pass_depth, compressor=False):
+def dec_file_from_pass(e_file, password, salt, file_output, depth=pass_depth, compressor=False):
     return _file_encrypter_(False, e_file, pass_to_key(password, salt, depth), file_output, compressor)
 
 
