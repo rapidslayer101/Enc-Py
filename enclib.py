@@ -2,13 +2,13 @@ from datetime import datetime, timedelta
 from sys import byteorder
 from re import search
 from time import time
-from os import path
+from os import path, system
 from random import choices
 from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.7.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.8.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 _default_block_size_ = 5000000  # modifies the chunking size
 _xor_salt_len_ = 8  # 94^8 combinations
 _default_pass_depth_ = 100000
@@ -21,15 +21,13 @@ def rand_b96_str(num):
 
 
 def to_hex(base_fr, base_to, hex_to_convert):
-    decimal = 0
-    power = len(str(hex_to_convert))-1
+    decimal, power = 0, len(str(hex_to_convert))-1
     for digit in str(hex_to_convert):
         decimal += _b96set_.index(digit)*base_fr**power
         power -= 1
     hexadecimal = ""
     while decimal > 0:
-        hexadecimal = _b96set_[decimal % base_to]+hexadecimal
-        decimal = decimal // base_to
+        hexadecimal, decimal = [_b96set_[decimal % base_to]+hexadecimal, decimal // base_to]
     return hexadecimal
 
 
@@ -40,16 +38,30 @@ def get_hex_base(hex_to_check):  # this is only a guess
 
 
 def pass_to_key(password, salt, depth):
-    password = password.encode()
-    salt = salt.encode()
+    password, salt = password.encode(), salt.encode()
     for i in range(depth):
         password = sha512(password+salt).digest()
     return to_hex(16, 96, password.hex())
 
 
+def pass_to_key_with_progress(password, salt, depth, dps):
+    password, salt, dps_4, start = password.encode(), salt.encode(), dps//4, time()
+    for i in range(depth):
+        password = sha512(password+salt).digest()
+        if i % dps_4 == 0:
+            system("cls")
+            try:
+                real_dps = int(round(i/(time()-start), 0))
+                print(f"Runtime: {round(time()-start, 2)}s  DPS: {real_dps}s  "
+                      f"Time left: {round((depth-i)/real_dps, 2)}s  "
+                      f"Current Depth: {i}/{depth}  Progress: {round(i/depth*100, 2)}%")
+            except ZeroDivisionError:
+                pass
+    return to_hex(16, 96, password.hex())
+
+
 def _xor_(data, key, xor_salt):
-    key_value = []
-    key = key.encode()
+    key_value, key = [], key.encode()
     for i in range((len(data)//64)+1):
         key = sha512(key+xor_salt).digest()
         key_value.append(key)
@@ -81,9 +93,7 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
     else:
         text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         print(f"Generating {len(text)} block keys")
-        key1 = int(to_hex(96, 16, key), 36)
-        alpha_gen = _b94set_
-        counter, keys_salt = [0, ""]
+        key1, alpha_gen, counter, keys_salt = int(to_hex(96, 16, key), 36), _b94set_, 0, ""
         while len(alpha_gen) > 0:
             counter += 2
             value = int(str(key1)[counter:counter+2]) << 1
