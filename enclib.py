@@ -8,27 +8,27 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.7.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
-default_block_size = 5000000  # modifies the chunking size
-xor_salt_len = 8  # 94^8 combinations
-default_pass_depth = 100000
-b96set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/¬`!\"£$%^&*()- =[{]};:'@#~\\|,<.>?"
-b94set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
+# enc 11.7.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+_default_block_size_ = 5000000  # modifies the chunking size
+_xor_salt_len_ = 8  # 94^8 combinations
+_default_pass_depth_ = 100000
+_b94set_ = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
+_b96set_ = _b94set_+"¬£"
 
 
 def rand_b96_str(num):
-    return "".join(choices(b96set, k=int(num)))
+    return "".join(choices(_b96set_, k=int(num)))
 
 
 def to_hex(base_fr, base_to, hex_to_convert):
     decimal = 0
     power = len(str(hex_to_convert))-1
     for digit in str(hex_to_convert):
-        decimal += b96set.index(digit)*base_fr**power
+        decimal += _b96set_.index(digit)*base_fr**power
         power -= 1
     hexadecimal = ""
     while decimal > 0:
-        hexadecimal = b96set[decimal % base_to]+hexadecimal
+        hexadecimal = _b96set_[decimal % base_to]+hexadecimal
         decimal = decimal // base_to
     return hexadecimal
 
@@ -63,9 +63,9 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
             text = text.encode()
         if compressor:
             text = compress(text, 9)
-        xor_salt = "".join(choices(b94set, k=xor_salt_len)).encode()
+        xor_salt = "".join(choices(_b94set_, k=_xor_salt_len_)).encode()
     else:
-        xor_salt, text = text[:xor_salt_len], text[xor_salt_len:]
+        xor_salt, text = text[:_xor_salt_len_], text[_xor_salt_len_:]
     if len(text)//block_size < 11:
         if enc:
             return xor_salt+_xor_(text, key, xor_salt)
@@ -82,7 +82,7 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
         text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         print(f"Generating {len(text)} block keys")
         key1 = int(to_hex(96, 16, key), 36)
-        alpha_gen = b96set
+        alpha_gen = _b94set_
         counter, keys_salt = [0, ""]
         while len(alpha_gen) > 0:
             counter += 2
@@ -165,33 +165,33 @@ def _file_encrypter_(enc, file, key, file_output, compressor):
         print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/136731168.599, 2)}s")
         with open(file, 'rb') as hash_file:
             data = hash_file.read()
-        _encrypter_(enc, data, key, default_block_size, compressor, file_output)
+        _encrypter_(enc, data, key, _default_block_size_, compressor, file_output)
         print(f"ENC/DEC COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
     else:
         return "File not found"
 
 
-def enc_from_pass(text, password, salt, depth=default_pass_depth, block_size=default_block_size):
+def enc_from_pass(text, password, salt, depth=_default_pass_depth_, block_size=_default_block_size_):
     return _encrypter_(True, text, pass_to_key(password, salt, depth), block_size, True)
 
 
-def enc_from_key(text, key, block_size=default_block_size):
+def enc_from_key(text, key, block_size=_default_block_size_):
     return _encrypter_(True, text, key, block_size, True)
 
 
-def dec_from_pass(e_text, password, salt, depth=default_pass_depth, block_size=default_block_size):
+def dec_from_pass(e_text, password, salt, depth=_default_pass_depth_, block_size=_default_block_size_):
     return _encrypter_(False, e_text, pass_to_key(password, salt, depth), block_size, True)
 
 
-def dec_from_key(e_text, key, block_size=default_block_size):
+def dec_from_key(e_text, key, block_size=_default_block_size_):
     return _encrypter_(False, e_text, key, block_size, True)
 
 
-def enc_file_from_pass(file, password, salt, file_output, depth=default_pass_depth, compressor=False):
+def enc_file_from_pass(file, password, salt, file_output, depth=_default_pass_depth_, compressor=False):
     return _file_encrypter_(True, file, pass_to_key(password, salt, depth), file_output, compressor)
 
 
-def dec_file_from_pass(e_file, password, salt, file_output, depth=default_pass_depth, compressor=False):
+def dec_file_from_pass(e_file, password, salt, file_output, depth=_default_pass_depth_, compressor=False):
     return _file_encrypter_(False, e_file, pass_to_key(password, salt, depth), file_output, compressor)
 
 
