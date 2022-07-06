@@ -1,0 +1,218 @@
+import os, time, re
+from base64 import b64decode
+from zlib import decompress
+from datetime import datetime
+
+
+# length settings
+
+hexlen_min = 0
+hexlen_max = 100
+alphalen_min = 35
+alphalen_max = ""  # variable not used anywhere
+
+
+def b64echeck(master_key):
+    while True:
+        if len(master_key) % 4 == 0:
+            break
+        else:
+            master_key = master_key + "="
+    return master_key
+
+
+def clear(): os.system('cls')
+
+
+def search(data, filter_fr, filter_to):
+    data = str(data)
+    m = re.search(f"""{filter_fr}(.+?){filter_to}""", data)
+    if m:
+        output = m.group(1)
+    else:
+        output = None
+    return output
+
+
+def decrypt_pass(enc_text, num2, alpha1, alpha2, alphalen):
+    def fib_iter():
+        a = 1
+        b = 1
+        c = 1
+        while len(str(b)) < len(enc_text)*2:
+            total = (a + b * num2) * c
+            c = b
+            b = a
+            a = total
+        return b
+
+    b = str(fib_iter())
+
+    counter = 0
+    outputend = ""
+    for letter in enc_text:
+        counter = counter + 2
+        alphabet = alpha2
+        msg = letter
+        if msg in alphabet:
+            key = b[counter:counter + 2]
+            key = int(key)
+            if key > alphalen:
+                key = num2
+            key = key - key - key
+            if key == 0:
+                newAlphabet = alphabet
+            elif key > 0:
+                partialOne = alphabet[:key]
+                partialTwo = alphabet[key:]
+                newAlphabet = partialTwo + partialOne
+            else:
+                partialOne = alphabet[:(alphalen + key)]
+                partialTwo = alphabet[(alphalen + key):]
+                newAlphabet = partialTwo + partialOne
+            encrypted = ""
+            for message_index in range(0, len(msg)):
+                if msg[message_index] == " ":
+                    encrypted += " "
+                for alphabet_index in range(0, len(newAlphabet)):
+                    if msg[message_index] == alphabet[alphabet_index]:
+                        encrypted += newAlphabet[alphabet_index]
+            outputend = outputend + encrypted
+        else:
+            outputend = outputend + msg
+
+    dtext = outputend
+
+    counter = 0
+    for i in dtext:
+        counter = counter + 1
+    content = str(dtext[:6]).replace("g", "0").replace("e", "1").replace("k", "2").replace("i", "3") \
+        .replace("u", "4").replace("d", "5").replace("r", "6").replace("w", "7").replace("q", "8").replace("p", "9")
+
+    def get_prime_number():
+        prime_numbers = []
+        candidate = int(content)
+        while True:
+            if candidate <= 3:
+                prime_numbers.append(candidate)
+                yield candidate
+
+            is_prime = True
+            for prime_num in prime_numbers:
+                if candidate % prime_num == 0:
+                    is_prime = False
+                    break
+
+            if is_prime:
+                prime_numbers.append(candidate)
+                yield candidate
+
+            candidate += 1
+
+    prime_numbers = get_prime_number()
+    while True:
+        x = next(prime_numbers)
+        if x == int(content):
+            num = x
+            break
+    newnum = ""
+    for i in range(counter):
+        newnum = str(newnum) + str(next(prime_numbers))
+    counter = 0
+    outputend = ""
+    for letter in dtext[6:]:
+        counter = counter + 2
+        alphabet = alpha1
+        msg = letter
+        if msg in alphabet:
+            key = newnum[counter:counter + 2]
+            key = int(key)
+            if key > alphalen:
+                key = num2
+            key = key - key - key
+            if key == 0:
+                newAlphabet = alphabet
+            elif key > 0:
+                partialOne = alphabet[:key]
+                partialTwo = alphabet[key:]
+                newAlphabet = partialTwo + partialOne
+            else:
+                partialOne = alphabet[:(alphalen + key)]
+                partialTwo = alphabet[(alphalen + key):]
+                newAlphabet = partialTwo + partialOne
+            encrypted = ""
+            for message_index in range(0, len(msg)):
+                if msg[message_index] == " ":
+                    encrypted += " "
+                for alphabet_index in range(0, len(newAlphabet)):
+                    if msg[message_index] == alphabet[alphabet_index]:
+                        encrypted += newAlphabet[alphabet_index]
+            outputend = outputend + encrypted
+        else:
+            outputend = outputend + msg
+
+    return decompress(b64decode(b64echeck(outputend))).decode('utf-8')
+
+
+def decrypt_k_d(master_key, data):
+    master_key = decompress(b64decode(b64echeck(master_key))).decode('utf-8')
+    
+    # detect key type needs to be added, 1, 2, 3
+
+    hexlen = hexlen_min
+    while True:
+        hexlen += 1
+        alphalen = alphalen_min
+        while True:
+            alphalen += 1
+            try:
+                p0_alpha = master_key[:alphalen]
+                p1_key = master_key[alphalen:alphalen+hexlen]
+                p1_e = master_key[alphalen+hexlen:-alphalen]
+                p3_alpha = master_key[-alphalen:]
+
+                def mkey_to_num(alpha, e):
+                    conversion_table = {}
+                    cvtable_counter = 0
+                    for i in alpha:
+                        conversion_table.__setitem__(i, cvtable_counter)
+                        cvtable_counter = cvtable_counter + 1
+
+                    hexadecimal = e.strip().upper()
+                    decimal = 0
+
+                    power = len(hexadecimal) - 1
+
+                    for digit in hexadecimal:
+                        decimal += conversion_table[digit] * hexlen ** power
+                        power -= 1
+
+                    return decimal
+
+                num1 = mkey_to_num(alpha=p1_key, e=p1_e)
+
+                if num1 == 0:
+                    break
+                else:
+                    try:
+                        test = decrypt_pass(data, num1, p0_alpha, p3_alpha, alphalen)
+                        print(test)
+                    except:
+                        xx = 0
+            except:
+                xx = 0
+        if hexlen > hexlen_max:
+            break
+
+    return alphalen
+
+
+new_key = input("Input key:\n")
+data = ""
+decrypt_k_d(new_key, data)
+
+while True:
+    data = input("Input Data:\n")
+    if data == "-change mkey":
+        new_key = input("Input new key:\n")
+    alphalen = decrypt_k_d(new_key, data)
