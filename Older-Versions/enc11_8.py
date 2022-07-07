@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 from sys import byteorder
 from re import search as sr
-from time import perf_counter
+from time import time
 from os import path, system
 from random import choices
 from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.8.2 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.8.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 _default_block_size_ = 5000000  # modifies the chunking size
 _xor_salt_len_ = 8  # 94^8 combinations
 _default_pass_depth_ = 100000
@@ -45,14 +45,14 @@ def pass_to_key(password, salt, depth):
 
 
 def pass_to_key_with_progress(password, salt, depth, dps):
-    password, salt, dps_4, start = password.encode(), salt.encode(), dps//4, perf_counter()
+    password, salt, dps_4, start = password.encode(), salt.encode(), dps//4, time()
     for i in range(depth):
         password = sha512(password+salt).digest()
         if i % dps_4 == 0:
             system("cls")
             try:
-                real_dps = int(round(i/(perf_counter()-start), 0))
-                print(f"Runtime: {round(perf_counter()-start, 2)}s  DPS: {real_dps}s  "
+                real_dps = int(round(i/(time()-start), 0))
+                print(f"Runtime: {round(time()-start, 2)}s  DPS: {real_dps}s  "
                       f"Time left: {round((depth-i)/real_dps, 2)}s  "
                       f"Current Depth: {i}/{depth}  Progress: {round(i/depth*100, 2)}%")
             except ZeroDivisionError:
@@ -169,14 +169,14 @@ def get_file_size(file):
 
 
 def _file_encrypter_(enc, file, key, file_output, compressor):
-    start = perf_counter()
+    start = time()
     if path.exists(file):
         file_name = file.split("/")[-1].split(".")[:-1]  # file_type = file.split("/")[-1].split(".")[-1:]
         print(f"{file_name} is {get_file_size(file)}, should take {round(path.getsize(file)/136731168.599, 2)}s")
         with open(file, 'rb') as hash_file:
             data = hash_file.read()
         _encrypter_(enc, data, key, _default_block_size_, compressor, file_output)
-        print(f"ENC/DEC COMPLETE OF {get_file_size(file)} IN {round(perf_counter()-start, 2)}s")
+        print(f"ENC/DEC COMPLETE OF {get_file_size(file)} IN {round(time()-start, 2)}s")
     else:
         return "File not found"
 
