@@ -8,7 +8,7 @@ from hashlib import sha512
 from zlib import compress, decompress
 from multiprocessing import Pool, cpu_count
 
-# enc 11.8.2 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 11.8.3 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 _default_block_size_ = 5000000  # modifies the chunking size
 _xor_salt_len_ = 8  # 94^8 combinations
 _default_pass_depth_ = 100000
@@ -41,22 +41,6 @@ def pass_to_key(password, salt, depth):
     password, salt = password.encode(), salt.encode()
     for i in range(depth):
         password = sha512(password+salt).digest()
-    return to_hex(16, 96, password.hex())
-
-
-def pass_to_key_with_progress(password, salt, depth, dps):
-    password, salt, dps_4, start = password.encode(), salt.encode(), dps//4, perf_counter()
-    for i in range(depth):
-        password = sha512(password+salt).digest()
-        if i % dps_4 == 0:
-            system("cls")
-            try:
-                real_dps = int(round(i/(perf_counter()-start), 0))
-                print(f"Runtime: {round(perf_counter()-start, 2)}s  DPS: {real_dps}s  "
-                      f"Time left: {round((depth-i)/real_dps, 2)}s  "
-                      f"Current Depth: {i}/{depth}  Progress: {round(i/depth*100, 2)}%")
-            except ZeroDivisionError:
-                pass
     return to_hex(16, 96, password.hex())
 
 
