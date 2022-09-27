@@ -12,7 +12,7 @@ import enclib as enc11_x
 if __name__ == '__main__':
     freeze_support()
     text = enc11_x.rand_b96_str(1000000)
-    #text = text*100
+    text = text*100
     #text = randbytes(1000000)
     print(f"{len(text)/1000000} Million chars")
 
@@ -38,9 +38,9 @@ if __name__ == '__main__':
     enc11_1_t = False
     enc11_3_t = False
     enc11_4_t = False
-    enc11_5_t = True
+    enc11_5_t = False
+    enc11_8_t = False
     enc11_x_t = True
-    enc11_8_t = True
 
     if enc2_t:
         print("ENC2.0", enc2.encrypt(text))
