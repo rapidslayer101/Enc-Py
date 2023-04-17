@@ -39,7 +39,7 @@ if __name__ == '__main__':
     enc11_3_t = False
     enc11_4_t = False
     enc11_5_t = False
-    enc11_8_t = False
+    enc11_8_t = True
     enc11_x_t = True
 
     if enc2_t:
@@ -276,12 +276,8 @@ if __name__ == '__main__':
 
     input("Inp")
     while True:
-        #enc11_5.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc", False)
-        #input()
-        #enc11_5.dec_file_from_pass("enc.renc", "key", "salt", "test.exe", False)
-        #input()
-        enc11_x.enc_file_from_pass("Setup_Factorio_x64_1.1.57.exe", "key", "salt", "enc.renc")
-        input()
-        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "test.exe")
+        enc11_x.enc_file_from_pass("jdk-17.0.4.1_windows-x64_bin.exe", "key", "salt", "enc.renc")
+        input("K")
+        enc11_x.dec_file_from_pass("enc.renc", "key", "salt", "jdk-17.0.4.1_windows-x64_bin.exe")
         input("Loop.")
 
