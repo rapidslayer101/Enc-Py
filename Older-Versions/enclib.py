@@ -7,12 +7,12 @@ from hashlib import sha512 as _sha512_
 from zlib import compress as _compress_, decompress as _decompress_
 from multiprocessing import Pool as _Pool_, cpu_count as _cpu_count_
 
-# enc 11.10.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 12.0.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 _default_block_size_ = 5000000  # the chunking size
 _xor_salt_len_ = 7  # 94^8 combinations
 _default_pass_depth_ = 100000  # the hash loop depth
-_b94set_ = "£0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>"
-_b96set_ = _b94set_+"¬?"
+_b94set_ = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
+_b96set_ = _b94set_+"¬£"
 
 
 # generate a random base 96 string of a given length
@@ -22,7 +22,6 @@ def rand_b96_str(num, alpha_set=_b96set_):
 
 # convert a string to another base
 def to_base(base_fr, base_to, hex_to_convert, alpha_set=_b96set_):
-    alpha_set, null_fix = alpha_set[:-1], alpha_set[-1]
     if not all([digit in alpha_set[:base_fr] for digit in str(hex_to_convert)]):
         return f"Input contains characters not in the base: {alpha_set[:base_fr]} "
     if 2 > base_to or base_to > len(alpha_set):
@@ -40,7 +39,7 @@ def to_base(base_fr, base_to, hex_to_convert, alpha_set=_b96set_):
 
 # attempts to find the base of an input string
 def get_base(data_to_resolve):
-    for i in range(95):
+    for i in range(96):
         if to_base(i+2, i+2, data_to_resolve) == data_to_resolve:
             return i+2
 
@@ -52,7 +51,7 @@ def pass_to_key(password, salt, depth=1000000):
     password, salt = password.encode(), salt.encode()
     for i in range(depth):
         password = _sha512_(password+salt).digest()
-    return to_base(17, 95, password.hex())
+    return to_base(16, 96, password.hex())
 
 
 # generates a key of equal length to the data then xor the data with the key
@@ -88,7 +87,7 @@ def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
     else:
         text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
         print(f"Generating {len(text)} block keys")
-        key1, alpha_gen, counter, keys_salt = int(to_base(95, 17, key), 36), _b94set_, 0, ""
+        key1, alpha_gen, counter, keys_salt = int(to_base(96, 16, key), 36), _b94set_, 0, ""
         while len(alpha_gen) > 0:
             counter += 2
             value = int(str(key1)[counter:counter+2]) << 1
@@ -223,4 +222,4 @@ def hash_a_file(file):
         while len(buf) > 0:
             hash_.update(buf)
             buf = hash_file.read(262144)
-    return to_base(17, 95, hash_.hexdigest())
+    return to_base(16, 96, hash_.hexdigest())
