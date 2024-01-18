@@ -1,4 +1,4 @@
-from datetime import datetime as _datetime_, timedelta as _timedelta_
+import datetime
 import sys
 import time
 import os
@@ -9,12 +9,12 @@ import multiprocessing
 import socket
 import rsa
 
-# enc 12.1.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
+# enc 12.1.1 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 default_salt = "52gy\"J$&)6%0}fgYfm/%ino}PbJk$w<5~j'|+R .bJcSZ.H&3z'A:gip/jtW$6A=G-;|&&rR81!BTElChN|+\"T"
 _default_block_size_ = 5000000  # the chunking size
 _xor_salt_len_ = 7  # 94^8 combinations
 _default_pass_depth_ = 100000  # the hash loop depth
-_b94set_ = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
+_b94set_ = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/`!\"$%^&*() -=[{]};:'@#~\\|,<.>?"
 _b96set_ = _b94set_+"¬£"
 
 
@@ -212,9 +212,9 @@ def dec_file_from_pass(e_file, password, salt, file_output, depth=_default_pass_
 # this function can be used to create a time based key system
 def round_time(dt=None, round_to=30):
     if not dt:
-        dt = _datetime_.now()
+        dt = datetime.datetime.now()
     seconds = (dt.replace(tzinfo=None)-dt.min).seconds
-    return dt+_timedelta_(0, (seconds+round_to/2)//round_to*round_to-seconds, -dt.microsecond)
+    return dt+datetime.timedelta(0, (seconds+round_to/2)//round_to*round_to-seconds, -dt.microsecond)
 
 
 # hashes a file using the SHA512 algorithm
@@ -251,14 +251,14 @@ class ClientSocket:
         else:
             self.ip = None
 
-    def connect(self):
+    def connect(self, connection_type=b"HDL"):
         try:
             self.s.connect((self.ip[0], int(self.ip[1])))
             print("Connected to server")
             l_ip, l_port = str(self.s).split("laddr=")[1].split("raddr=")[0][2:-3].split("', ")
             s_ip, s_port = str(self.s).split("raddr=")[1][2:-2].split("', ")
             print(f" << Server connected via {l_ip}:{l_port} -> {s_ip}:{s_port}")
-            self.s.send(b"CLI")
+            self.s.send(connection_type)
             pub_key, pri_key = rsa.newkeys(512)
             try:
                 self.s.send(rsa.PublicKey.save_pkcs1(pub_key))
