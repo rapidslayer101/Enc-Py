@@ -67,87 +67,104 @@ def _xor_(data, key, xor_salt):
     return (int.from_bytes(data, sys.byteorder) ^ int.from_bytes(key, sys.byteorder)).to_bytes(len(data), sys.byteorder)
 
 
-def _encrypter_(enc, text, key, block_size, compressor, file_output=None):
-    if enc:
-        if type(text) != bytes:
-            text = text.encode()
-        if compressor:
-            text = zlib.compress(text, 9)
-        xor_salt = "".join(random.choices(_b94set_, k=_xor_salt_len_)).encode()
-    else:
-        xor_salt, text = text[:_xor_salt_len_], text[_xor_salt_len_:]
-    if len(text)//block_size < 11 and not file_output:
-        if enc:
-            return xor_salt+_xor_(text, key, xor_salt)
-        elif compressor:
-            block = zlib.decompress(_xor_(text, key, xor_salt))
+def _block_encrypter_(text, key, block_size, xor_salt):
+    text = [text[i:i + block_size] for i in range(0, len(text), block_size)]
+    print(f"Generating {len(text)} block keys")
+    key1, alpha_gen, counter, keys_salt = int(to_base(96, 16, key), 36), _b94set_, 0, ""
+    while len(alpha_gen) > 0:
+        counter += 2
+        value = int(str(key1)[counter:counter + 2]) << 1
+        while value > len(alpha_gen) - 1:
+            value = value // 2
+        if len(str(key1)[counter:]) < 2:
+            keys_salt += alpha_gen
+            alpha_gen = alpha_gen.replace(alpha_gen, "")
         else:
-            block = _xor_(text, key, xor_salt)
-        try:
-            return block.decode()
-        except UnicodeDecodeError:
-            return block
+            chosen = alpha_gen[value]
+            keys_salt += chosen
+            alpha_gen = alpha_gen.replace(chosen, "")
+    block_keys = []
+    for i in range(len(text)):
+        key = pass_to_key(key, keys_salt, 1)
+        block_keys.append(key)
+    print(f"Launching {len(text)} threads")
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    result_objects = [pool.apply_async(_xor_, args=(text[x], block_keys[x], xor_salt)) for x in range(0, len(text))]
+    pool.close()
+    return pool, result_objects
+
+
+def _encrypter_(text, key, block_size, compressor, file_output=None):
+    if not isinstance(text, bytes):
+        text = text.encode()
+    if compressor:
+        text = zlib.compress(text, 9)
+    xor_salt = "".join(random.choices(_b94set_, k=_xor_salt_len_)).encode()
+    if len(text)//block_size < 11 and not file_output:
+        return xor_salt+_xor_(text, key, xor_salt)
     else:
-        text = [text[i:i+block_size] for i in range(0, len(text), block_size)]
-        print(f"Generating {len(text)} block keys")
-        key1, alpha_gen, counter, keys_salt = int(to_base(96, 16, key), 36), _b94set_, 0, ""
-        while len(alpha_gen) > 0:
-            counter += 2
-            value = int(str(key1)[counter:counter+2]) << 1
-            while value > len(alpha_gen)-1:
-                value = value // 2
-            if len(str(key1)[counter:]) < 2:
-                keys_salt += alpha_gen
-                alpha_gen = alpha_gen.replace(alpha_gen, "")
-            else:
-                chosen = alpha_gen[value]
-                keys_salt += chosen
-                alpha_gen = alpha_gen.replace(chosen, "")
-        block_keys = []
-        for i in range(len(text)):
-            key = pass_to_key(key, keys_salt, 1)
-            block_keys.append(key)
-        print(f"Launching {len(text)} threads")
-        pool = multiprocessing.Pool(multiprocessing.cpu_count())
-        result_objects = [pool.apply_async(_xor_, args=(text[x], block_keys[x], xor_salt)) for x in range(0, len(text))]
-        pool.close()
+        pool, result_objects = _block_encrypter_(text, key, block_size, xor_salt)
         if file_output:
-            if enc:
-                with open(file_output, "wb") as f:
-                    for loop, result in enumerate(result_objects):
-                        if loop == 0:
-                            data = xor_salt+result.get()
-                            f.write(data)
-                        else:
-                            f.write(result.get())
-            else:
-                d_data = [x.get() for x in result_objects]
-                if type(d_data[0]) == bytes:
-                    with open(f"{file_output}", "wb") as f:
-                        for block in d_data:
-                            f.write(block)
-                if type(d_data[0]) == str:
-                    with open(f"{file_output}", "w", encoding="utf-8") as f:
-                        for block in d_data:
-                            f.write(block.replace("\r", ""))
-                if compressor:
-                    with open(f"{file_output}", "rb") as f:
-                        data = zlib.decompress(f.read())
-                    with open(f"{file_output}", "wb") as f:
+            with open(file_output, "wb") as f:
+                for loop, result in enumerate(result_objects):
+                    if loop == 0:
+                        data = xor_salt+result.get()
                         f.write(data)
+                    else:
+                        f.write(result.get())
             pool.join()
         else:
             d_data = b""
             for result in result_objects:
                 d_data += result.get()
-            if enc:
-                d_data = xor_salt + d_data
-            elif compressor:
-                d_data = zlib.decompress(d_data)
+            d_data = xor_salt + d_data
+            pool.join()
+            return d_data
+
+
+def _decrypter_(text, key, block_size, compressor, decode=True, file_output=None):
+    xor_salt, text = text[:_xor_salt_len_], text[_xor_salt_len_:]
+    if len(text) // block_size < 11 and not file_output:
+        if compressor:
+            block = zlib.decompress(_xor_(text, key, xor_salt))
+        else:
+            block = _xor_(text, key, xor_salt)
+        if decode:
             try:
-                d_data = d_data.decode()
+                return block.decode()
             except UnicodeDecodeError:
-                pass
+                return block
+        else:
+            return block
+    else:
+        pool, result_objects = _block_encrypter_(text, key, block_size, xor_salt)
+        if file_output:
+            d_data = [x.get() for x in result_objects]
+            if isinstance(d_data[0], bytes):
+                with open(f"{file_output}", "wb") as f:
+                    for block in d_data:
+                        f.write(block)
+            if isinstance(d_data[0], str):
+                with open(f"{file_output}", "w", encoding="utf-8") as f:
+                    for block in d_data:
+                        f.write(block.replace("\r", ""))
+            if compressor:
+                with open(f"{file_output}", "rb") as f:
+                    data = zlib.decompress(f.read())
+                with open(f"{file_output}", "wb") as f:
+                    f.write(data)
+            pool.join()
+        else:
+            d_data = b""
+            for result in result_objects:
+                d_data += result.get()
+            if compressor:
+                d_data = zlib.decompress(d_data)
+            if decode:
+                try:
+                    d_data = d_data.decode()
+                except UnicodeDecodeError:
+                    pass
             pool.join()
             return d_data
 
@@ -170,7 +187,10 @@ def _file_encrypter_(enc, file, key, file_output, compressor):
         print(f"{file_name} is {get_file_size(file)}, should take {round(os.path.getsize(file)/136731168.599, 2)}s")
         with open(file, 'rb') as hash_file:
             data = hash_file.read()
-        _encrypter_(enc, data, key, _default_block_size_, compressor, file_output)
+        if enc:
+            _encrypter_(data, key, _default_block_size_, compressor, file_output)
+        else:
+            _decrypter_(data, key, _default_block_size_, compressor, True, file_output)
         print(f"ENC/DEC COMPLETE OF {get_file_size(file)} IN {round(time.perf_counter()-start, 2)}s")
     else:
         return "File not found"
@@ -180,22 +200,22 @@ def _file_encrypter_(enc, file, key, file_output, compressor):
 
 # encrypts data
 def enc_from_pass(text, password, salt, depth=_default_pass_depth_, block_size=_default_block_size_):
-    return _encrypter_(True, text, pass_to_key(password, salt, depth), block_size, True)
+    return _encrypter_(text, pass_to_key(password, salt, depth), block_size, True)
 
 
 # uses a pre-generated key to encrypt data
 def enc_from_key(text, key, block_size=_default_block_size_):
-    return _encrypter_(True, text, key, block_size, True)
+    return _encrypter_(text, key, block_size, True)
 
 
 # decrypts data
-def dec_from_pass(e_text, password, salt, depth=_default_pass_depth_, block_size=_default_block_size_):
-    return _encrypter_(False, e_text, pass_to_key(password, salt, depth), block_size, True)
+def dec_from_pass(e_text, password, salt, depth=_default_pass_depth_, block_size=_default_block_size_, decode=True):
+    return _decrypter_(e_text, pass_to_key(password, salt, depth), block_size, True, decode)
 
 
 # uses a pre-generated key to decrypt data
-def dec_from_key(e_text, key, block_size=_default_block_size_):
-    return _encrypter_(False, e_text, key, block_size, True)
+def dec_from_key(e_text, key, block_size=_default_block_size_, decode=True):
+    return _decrypter_(e_text, key, block_size, True, decode)
 
 
 # encrypts a file
@@ -290,6 +310,7 @@ def drive_insert_detector(time_out=None):
                 return [d for d in now_drives if d not in before_drives][0]
             except IndexError:
                 before_drives = [f"{d}:\\" for d in dl if os.path.exists(f"{d}:\\")]
+        time.sleep(0.1)
 
 
 # server class containing connection algorithm and data transfer functions
@@ -337,12 +358,37 @@ class ClientSocket:
             else:
                 print("Failed to reconnect")
 
-    def recv_d(self, buf_lim=1024):  # receive and decrypt data to server
+    def recv_d(self, buf_lim=1024, decode=True):  # receive and decrypt data to server
         try:
-            return dec_from_key(self.s.recv(buf_lim), self.enc_key)
+            return dec_from_key(self.s.recv(buf_lim), self.enc_key, _default_block_size_, decode)
         except ConnectionResetError:
             print("CONNECTION_LOST, reconnecting...")
             if self.ip and self.connect():
                 return dec_from_key(self.s.recv(buf_lim), self.enc_key)
             else:
                 print("Failed to reconnect")
+
+    def recv_file(self):
+        file_name, file_size = self.recv_d(1024).split("🱫")
+        if not file_name:
+            return False
+        else:
+            file_size = int(file_size)
+            print(f"Downloading file {file_name} ({file_size})...")
+            all_bytes = b""
+            start = time.perf_counter()
+            while True:  # receive update from server
+                bytes_read = self.recv_d(32768, False)
+                if b"_BREAK_" in bytes_read:
+                    all_bytes += bytes_read[:-7]
+                    break
+                if time.perf_counter() - start > 0.25:
+                    start = time.perf_counter()
+                    print(f"Downloading version {file_name[:-4].replace('rdisc', 'Rdisc')} "
+                          f"({round((len(all_bytes) / file_size) * 100, 2)}%)")
+                all_bytes += bytes_read
+            with open(f"{file_name}", "wb") as f:
+                f.write(all_bytes)
+            print(f"Downloaded {file_name} ({get_file_size(file_name)})")
+            return True
+
