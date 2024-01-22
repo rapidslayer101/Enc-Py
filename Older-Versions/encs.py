@@ -1,3 +1,4 @@
+import time
 from sys import getsizeof
 from random import randbytes
 from time import perf_counter
@@ -8,13 +9,14 @@ import enc8_5, enc8_2, enc8, enc7, enc6, enc5, enc4, enc3, enc2
 import enc10 as enc10_0
 import enc11 as enc11_0
 import enclib11_10 as enc11_10
-import enclib as enc12_x
+import enc12 as enc12_2
+import enclib as enc13_x
 
 if __name__ == '__main__':
     freeze_support()
-    text = enc12_x.rand_b96_str(1000000)
+    text = enc13_x.rand_b96_str(1000000)
     text = randbytes(1000000)
-    #text = text * 100
+    text = text * 10
     print(f"{len(text)/1000000} Million chars")
 
     enc2_t = False
@@ -40,9 +42,10 @@ if __name__ == '__main__':
     enc11_3_t = False
     enc11_4_t = False
     enc11_5_t = False
-    enc11_8_t = True
+    enc11_8_t = False
     enc11_10_t = False
-    enc12_x_t = True
+    enc12_2_t = False
+    enc13_x_t = True
 
     if enc2_t:
         print("ENC2.0", enc2.encrypt(text))
@@ -241,16 +244,34 @@ if __name__ == '__main__':
         else:
             print("ENC11.x FAIL")
 
-    if enc12_x_t:
+    if enc12_2_t:
         start = perf_counter()
-        key = enc12_x.pass_to_key("key", "salt", 100000)
+        key = enc12_2.pass_to_key("key", "salt", 100000)
         print("P2K.TME", round(perf_counter()-start, 4))
         start = perf_counter()
-        enc12_x_e = enc12_x.enc_from_key(text, key)
-        if enc12_x.dec_from_key(enc12_x_e, key) == text:
-            print("ENC11.x2", round(perf_counter()-start, 4), len(enc12_x_e), getsizeof(enc12_x_e))
+        enc12_2_e = enc12_2.enc_from_key(text, key)
+        if enc12_2.dec_from_key(enc12_2_e, key) == text:
+            print("ENC12.2", round(perf_counter()-start, 4), len(enc12_2_e), getsizeof(enc12_2_e))
         else:
-            print("ENC11.x2 FAIL")
+            print("ENC12.2 FAIL")
+
+    if enc13_x_t:
+        start = perf_counter()
+        key = enc13_x.pass_to_key("key", "salt")
+        print("P2K.TME", round(perf_counter()-start, 4))
+        start = perf_counter()
+        enc13_x_e = enc13_x.enc_from_key(text, key)
+        if enc13_x.dec_from_key(enc13_x_e, key) == text:
+            print("ENC13.x", round(perf_counter()-start, 4), len(enc13_x_e), getsizeof(enc13_x_e))
+        else:
+            print("ENC13.x FAIL")
+
+        start = perf_counter()
+        enc13_x_e = enc13_x.enc_from_key(text, key, True)
+        if enc13_x.dec_from_key(enc13_x_e, key, False, True) == text:
+            print("ENC13.xT", round(perf_counter()-start, 4), len(enc13_x_e), getsizeof(enc13_x_e))
+        else:
+            print("ENC13.xT FAIL")
 
     graph = False
     input("Inp")
@@ -259,39 +280,54 @@ if __name__ == '__main__':
         plt.ion()
 
         x = []
-        enc11x_1 = []
-        enc11x_2 = []
-        enc11x_3 = []
-        text_len = 1000000
-        key = enc12_x.pass_to_key("key", "salt", 100000)
+        enc11x_5 = []
+        enc12x_2 = []
+        enc13x_x = []
+        enc13x_t = []
+        key = enc13_x.pass_to_key("key", "salt", 100000)
+        text_len = 0
+        var1 = 1000000
+        var2 = 100
+        timer1, timer2, timer3, timer4 = 0, 0, 0, 0
         while True:
-            text_len += 1000000
-            text = enc12_x.rand_b96_str(text_len)
+            text = randbytes(var1)
+            text = text * var2
+            text_mul = (var1*var2)
+            text_len += len(text)
 
             start = perf_counter()
-            enc12_x.enc_from_key(text, key)
-            enc11x_1.append(float(str(perf_counter() - start)[:-14]))
+            enc11_5.enc_from_key(text, key)
+            timer1 += float(str(perf_counter() - start)[:-14])
+            enc11x_5.append(timer1)
 
             start = perf_counter()
-            enc12_x.enc_from_key(text, key, 10000000)
-            enc11x_2.append(float(str(perf_counter() - start)[:-14]))
+            enc12_2.enc_from_key(text, key)
+            timer2 += float(str(perf_counter() - start)[:-14])
+            enc12x_2.append(timer2)
 
             start = perf_counter()
-            enc12_x.enc_from_key(text, key, 100000000)
-            enc11x_3.append(float(str(perf_counter()-start)[:-14]))
+            enc13_x.enc_from_key(text, key)
+            timer3 += float(str(perf_counter() - start)[:-14])
+            enc13x_x.append(timer3)
 
-            print(text_len)
-            x.append(text_len/1000000)
-            plt.plot(x, enc11x_1, label="enc11.x_1", color="red")
-            plt.plot(x, enc11x_2, label="enc11.x_2", color="orange")
-            plt.plot(x, enc11x_3, label="enc11.x_3", color="green")
+            start = perf_counter()
+            enc13_x.enc_from_key(text, key, True)
+            timer4 += float(str(perf_counter() - start)[:-14])
+            enc13x_t.append(timer4)
+
+            x.append(f"{text_len/1000000}m")
+            plt.plot(x, enc11x_5, label="enc11.x_3", color="pink")
+            plt.plot(x, enc12x_2, label="enc12.x_2", color="black")
+            plt.plot(x, enc13x_x, label="enc13.x_x", color="purple")
+            plt.plot(x, enc13x_t, label="enc13.x_t", color="green")
             plt.show()
-            plt.pause(0.05)
+            plt.pause(0.1)
+            #time.sleep(0.5)
 
     #input("Inp")
     while True:
-        enc12_x.enc_file_from_pass("seed_key.txt", "key", "salt", "enc.renc")
+        enc13_x.enc_file_from_pass("seed_key.txt", "key", "salt", "enc.renc")
         input("K")
-        enc12_x.dec_file_from_pass("enc.renc", "key", "salt", "seed_key1.txt")
+        enc13_x.dec_file_from_pass("enc.renc", "key", "salt", "seed_key1.txt")
         input("Loop.")
 
