@@ -1,14 +1,14 @@
 import datetime
-import sys
-import time
-import os
-import random
 import hashlib
 import multiprocessing
+import os
+import random
 import socket
+import sys
+import time
 import rsa
 
-# enc 12.9.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)  # todo version before 13.0.0
+# enc 13.0.0 - CREATED BY RAPIDSLAYER101 (Scott Bree)
 default_salt = "52gy\"J$&)6%0}fgYfm/%ino}PbJk$w<5~j'|+R .bJcSZ.H&3z'A:gip/jtW$6A=G-;|&&rR81!BTElChN|+\"T"
 _cpu_count_ = multiprocessing.cpu_count()  # the chunking size
 _xor_salt_len_ = 7  # 94^8 combinations
@@ -49,7 +49,7 @@ def get_base(data_to_resolve: str):
 # turns a password and salt into a key
 # used to save a key so encryption/decryption does not require the generation of a key each time
 # can also be used as a string hider to hide data other than a password
-def pass_to_key(password: str, salt: str, depth=200000):
+def pass_to_key(password: str, salt: str, depth=100000):
     password, salt = password.encode(), salt.encode()
     for i in range(depth):
         password = hashlib.sha512(password+salt).digest()
@@ -101,7 +101,14 @@ def _decrypter_(text, key, decode=True, threading=False, file_output=False):
     text_len = len(text)
     xor_salt, text = text[:_xor_salt_len_], text[_xor_salt_len_:]
     if not threading:
-        return _xor_(text, key, xor_salt)
+        block = _xor_(text, key, xor_salt)
+        if decode:
+            try:
+                return block.decode()
+            except UnicodeDecodeError:
+                return block
+        else:
+            return block
     else:
         block_size = (text_len+93) // _cpu_count_
         if text_len//block_size > (50000000//_cpu_count_) and not file_output:
@@ -210,7 +217,7 @@ def dec_from_pass(e_text, password, salt, depth=_default_pass_depth_, decode=Tru
 
 
 # uses a pre-generated key to decrypt data
-def dec_from_key(e_text, key, decode=False, threading=False):
+def dec_from_key(e_text, key, decode=True, threading=False):
     return _decrypter_(e_text, key, decode, threading)
 
 
@@ -354,9 +361,9 @@ class ClientSocket:
             else:
                 print("Failed to reconnect")
 
-    def recv_d(self, buf_lim=1024, decode=True, threading=True):  # receive and decrypt data to server
+    def recv_d(self, buf_lim=1024, decode=True, threading=False):  # receive and decrypt data to server
         try:
-            return dec_from_key(self.s.recv(buf_lim), self.enc_key, threading, decode)
+            return dec_from_key(self.s.recv(buf_lim), self.enc_key, decode, threading)
         except ConnectionResetError:
             print("CONNECTION_LOST, reconnecting...")
             if self.ip and self.connect():
@@ -364,27 +371,31 @@ class ClientSocket:
             else:
                 print("Failed to reconnect")
 
-    def recv_file(self):
-        file_name, file_size = self.recv_d(1024).split("🱫")
-        if not file_name:
+    def recv_file(self, buffer=65356):
+        file_data = self.recv_d()
+        if file_data == "N":
             return False
         else:
+            file_name, file_size = file_data.split("🱫")
             file_size = int(file_size)
             print(f"Downloading file {file_name} ({file_size})...")
             all_bytes = b""
             start = time.perf_counter()
-            while True:  # receive update from server
-                bytes_read = self.recv_d(32768, False)
-                if b"_BREAK_" in bytes_read:
-                    all_bytes += bytes_read[:-7]
-                    break
+            for i in range(file_size//buffer):
+                bytes_read = self.recv_d(buffer, False)
                 if time.perf_counter() - start > 0.25:
                     start = time.perf_counter()
-                    print(f"Downloading version {file_name[:-4].replace('rdisc', 'Rdisc')} "
-                          f"({round((len(all_bytes) / file_size) * 100, 2)}%)")
+                    print(f"Downloading {file_name[:-4]} ({round((len(all_bytes) / file_size) * 100, 2)}%)")
                 all_bytes += bytes_read
+            all_bytes += self.recv_d((file_size % (buffer-7))+7, False)
             with open(f"{file_name}", "wb") as f:
                 f.write(all_bytes)
-            print(f"Downloaded {file_name} ({get_file_size(file_name)})")
-            return True
+            if hash_a_file(file_name) == self.recv_d():
+                print(f"Downloaded {file_name} ({get_file_size(file_name)})")
+                self.send_e("V")
+                return True
+            else:
+                print("File hash does not match server. Download failed")
+                self.send_e("N")
+                self.recv_file(32678)
 
